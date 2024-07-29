@@ -22,7 +22,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/graph" element={<BUWiseChart />} />
+         
           <Route element={<ProtectedRoute />}>
             <Route path="/admin" element={<Admin />} />
             <Route path="/hoe" element={<Hoe />} />
@@ -37,7 +37,7 @@ function App() {
               path="/configureSeatAllocation"
               element={<ConfigureSeatAllocation />}
             ></Route>
-            
+             <Route path="/graph" element={<BUWiseChart />} />
           </Route>
         </Routes>
       </Router>
