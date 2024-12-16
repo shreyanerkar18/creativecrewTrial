@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useContext } from 'react';
 import axios from 'axios';
 import {
   Button, Grid, Typography, Select, MenuItem, InputLabel, FormControl, Paper, TextField, Box, Snackbar, Alert,
@@ -6,6 +6,8 @@ import {
 } from '@mui/material';
 import Seat from './Seat';
 import { baseurl } from './utils';
+import { AuthContext } from "./AuthProvider";
+import {jwtDecode} from 'jwt-decode'
 
 const Hoe = () => {
   const [HoeList, setHoeList] = useState([]);
@@ -30,6 +32,14 @@ const Hoe = () => {
   const [selectedCampus, setSelectedCampus] = useState('');
   const [selectedFloor, setSelectedFloor] = useState('');
 
+  const { token } = useContext(AuthContext);
+  const decoded = jwtDecode(token); 
+  // console.log(decoded.bu);
+  const hoe_bu = decoded.bu === "cloud" ? 1 : 
+                decoded.bu === "service" ? 2 : 
+                decoded.bu === "sales" ? 3 : 
+                decoded.bu === "Group Infrastructure Services" ? 4 : 5;
+
   /*-------- these constants are used to show respected values in the dropdowns --------*/
   const countries = [...new Set(locations.map(location => location.country))];
   const states = [...new Set(locations.filter(location => location.country === selectedCountry).map(location => location.state))];
@@ -43,7 +53,7 @@ const Hoe = () => {
   };
 
   useEffect(() => {
-    getHOEDetails(1);  // Aslo change id in line 110 && 141
+    getHOEDetails(hoe_bu);  // Aslo change id in line 110 && 141
   }, []);
 
   /*-------- getHOEDetails function get HOE and Managers details from database --------*/
@@ -116,7 +126,7 @@ const Hoe = () => {
 
   useEffect(() => {
     if (selectedFloor !== "") {
-      getManagerDetails(1);  // Aslo change id in line 41 && 141. yOU HAVE TO CHANGE ID AT FOUR PLACES
+      getManagerDetails(hoe_bu);  // Aslo change id in line 41 && 141. yOU HAVE TO CHANGE ID AT FOUR PLACES
     }
   }, [selectedFloor]);
 
@@ -150,7 +160,7 @@ const Hoe = () => {
         });
         setSelectedSeats([]);
         setIsSeatsChanging(false);
-        getManagerDetails(1); // Refresh data  // Aslo change id in line 41 && 110
+        getManagerDetails(hoe_bu); // Refresh data  // Aslo change id in line 41 && 110
         setOpenSnackbar(true); // Show Snackbar
       } catch (err) {
         console.error(err);
@@ -195,6 +205,10 @@ const Hoe = () => {
     setSelectedSeats([]);
     setIsSeatsChanging(true);
     setSelectedManager('');
+    setFirstName('');
+    setLastName('');
+    setFirstNameError("");
+    setLastNameError("");
   }
 
   const onClickingAddManager = async () => {
@@ -204,16 +218,18 @@ const Hoe = () => {
       }
       else {
         try {
-          await axios.post(`${baseurl}/addNewManager`, {
+          const response = await axios.post(`${baseurl}/addNewManager`, {
             firstName: firstName,
             lastName: lastName, businessUnit: HOE.name, country: HOE.country, state: HOE.state,
             city: HOE.city, campus: HOE.campus, floor: HOE.floor, seats_array: selectedSeats, hoe_id: HOE.id
           });
+          const newManager =  response.data.result;
           console.log("f", firstName, "l", lastName);
           setIsSeatsChanging(false);
           setIsAddingManager(false);
           setSelectedSeats([]);
-          getManagerDetails(1);
+          await getManagerDetails(hoe_bu);
+          setSelectedManager({ ...newManager, name: `${newManager.first_name} ${newManager.last_name}` });
 
         } catch (err) {
           console.error(err)
@@ -233,13 +249,13 @@ const Hoe = () => {
   const handleBlur = (event) => {
     const { name, value } = event.target;
     if (name === "firstname") {
-      if (event.target.value === "") {
+      if (event.target.value.trim() === "") {
         setFirstNameError("*Required");
       } else {
         setFirstNameError("");
       }
     } else if (name === "lastname") {
-      if (event.target.value === "") {
+      if (event.target.value.trim() === "") {
         setLastNameError("*Required")
       } else {
         setLastNameError("");

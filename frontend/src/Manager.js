@@ -1,6 +1,6 @@
 //changed ranges in giving renderSeats function
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import {
     Button, Grid, Typography, Select, MenuItem, InputLabel, FormControl, Paper, TextField, Box, Snackbar, Alert,
@@ -8,6 +8,8 @@ import {
 } from '@mui/material';
 import Seat from './ManagerSeats';
 import { baseurl } from './utils';
+import { AuthContext } from "./AuthProvider";
+import {jwtDecode} from 'jwt-decode'
 
 const Manager = () => {
     const days = [
@@ -19,6 +21,104 @@ const Manager = () => {
         { id: 'All Days', value: 'all' }
     ];
 
+
+
+
+
+    const [newFirstName, setNewFirstName] = useState('');
+    const [newLastName, setNewLastName] = useState('');
+    const [newSeats, setNewSeats] = useState({"Monday" : "WFH", "Tuesday" : "WFH", "Wednesday" : "WFH", "Thursday" : "WFH", "Friday" : "WFH"}); // New state variable for seats
+    const [newFirstNameError, setNewFirstNameError] = useState('');
+    const [newLastNameError, setNewLastNameError] = useState('');
+    const [isAddingEmployee, setIsAddingEmployee] = useState(false); // Track if we are adding a new employee
+
+    
+    const handleNewEmployeeBlur = (event) => {
+        const { name, value } = event.target;
+        if (name === "newFirstName") {
+          if (value.trim() === "") {
+            setNewFirstNameError("*Required");
+          } else {
+            setNewFirstNameError("");
+          }
+        } else if (name === "newLastName") {
+          if (value.trim() === "") {
+            setNewLastNameError("*Required");
+          } else {
+            setNewLastNameError("");
+          }
+        }
+      };
+      
+      const onClickingAddEmployeeButton = async () => {
+        if (newFirstName !== "" && newLastName !== "") {
+          try {
+            const response = await axios.post(`${baseurl}/addNewEmployee`, {
+              firstName: newFirstName,
+              lastName: newLastName,
+              managerId: managerId,
+              seat_data: newSeats,
+              businessUnit : manager.business_unit
+            });
+      
+            const newEmployee = response.data.result;
+            //console.log("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr", response.data)
+            setEmployees([...employees, { ...newEmployee, name: `${newEmployee.first_name} ${newEmployee.last_name}`, seats_array: [...new Set(Object.values(newEmployee.seat_data))] }]);
+      
+            // Clear the form
+            setNewFirstName("");
+            setNewLastName("");
+            setNewSeats([]);
+            setNewFirstNameError("");
+            setNewLastNameError("");
+            setIsAddingEmployee(false); // Reset adding state
+            setIsSeatsChanging(false);
+      
+            // Optionally, set the newly added employee as the selected employee
+            setSelectedEmployee({ ...newEmployee, name: `${newEmployee.first_name} ${newEmployee.last_name}`,  seats_array: [...new Set(Object.values(newEmployee.seat_data))] });
+            setSeatData(newEmployee.seat_data);
+      
+          } catch (err) {
+            console.error('Error adding employee:', err);
+          }
+        } else {
+          if (newFirstName === "") setNewFirstNameError("*Required");
+          if (newLastName === "") setNewLastNameError("*Required");
+          if (newSeats.length === 0) alert("Please select at least one seat");
+        }
+      };
+      
+      const onClickingAddNewEmployeeButton = () => {
+        setIsAddingEmployee(true);
+        setIsSeatsChanging(true);
+        setNewFirstName(""); // Clear the input fields
+        setNewLastName("");
+        //setNewSeats([]);
+        setNewFirstNameError(""); // Clear any previous error messages
+        setNewLastNameError("");
+        setSelectedSeats("WFH");
+        setSeatData({...newSeats});
+        setSelectedEmployee('');
+        setOpenWFHSnackbar(false);
+
+        if (selectedDay === "all") {
+            setSelectedDay("Monday");
+            setSelectedSeats(newSeats["Monday"]);
+        }
+        else {
+            setSelectedSeats(newSeats[selectedDay]);
+        }
+      };
+      
+
+
+
+
+
+
+
+
+    const [managerId, setManagerId] = useState('');
     const [manager, setManager] = useState({});  //to store and update HOE
     const [employees, setEmployees] = useState([]); //to store and update all managers under HOE
     const [selectedEmployee, setSelectedEmployee] = useState('');  //to store and update selected manager in drop-down
@@ -26,6 +126,10 @@ const Manager = () => {
     const [isSeatsChanging, setIsSeatsChanging] = useState(false); //we cannot select seats when isSeatsChanging is false
     const [selectedDay, setSelectedDay] = useState(days[5].value);
     const [seatData, setSeatData] = useState({});
+
+    const { token } = useContext(AuthContext);
+    const decode = jwtDecode(token);
+    //console.log(decode)
 
     const [openSnackbar, setOpenSnackbar] = useState(false); // to show a small popup when we update table in database with content "Data Updated Successfully"
     const [OpenWFHSnackbar, setOpenWFHSnackbar] = useState(false);
@@ -46,9 +150,38 @@ const Manager = () => {
     };
 
 
+
+  useEffect(() => {
+    const fetchManagerDetails = async () => {
+      if (token) {
+
+        try {
+          // Use decoded details in the query body
+          const response1 = await axios.get(`${baseurl}/getManagerIdFromTable`, {
+            params: { // Using params to send query parameters
+              bu : decode.bu,
+              firstName : decode.firstName,
+              lastName : decode.lastName
+            }
+          });
+
+          const response_data = response1;
+          setManagerId(response_data.data[0].id);
+        } catch (err) {
+          console.error('Error fetching data:', err);
+        }
+      }
+    };
+
+    fetchManagerDetails(); // Call the async function
+  }, []);
+
+
     useEffect(() => {
-        getManagerDetails(1);  //Line 133
-    }, []);
+        if (managerId !== '') {
+            getManagerDetails(managerId);
+        }  //Line 133
+    }, [managerId]);
 
     /*-------- getHOEDetails function get HOE and Managers details from database --------*/
     const getManagerDetails = async (id) => {
@@ -57,9 +190,10 @@ const Manager = () => {
             const response2 = await axios.get(`${baseurl}/getEmployeesByManagerIdFromTable/${id}`);
             // console.log(response1.data);
             // console.log('Manager data:', response1.data[0]);
-            //  console.log("Employees", response2.data);
+            //console.log("Employees", response2.data);
 
             setManager(response1.data[0]);
+            //console.log("manager details", response1.data[0]);
             //console.log(response1.data[0] > 0);
             setEmployees(response2.data.map(item => ({ ...item, name: item.first_name + " " + item.last_name, seats_array: [...new Set(Object.values(item.seat_data))] })));
 
@@ -125,10 +259,18 @@ const Manager = () => {
         if (!(selectedSeats === parseInt(seat))) {
             setSelectedSeats(seat);
             setSeatData({ ...seatData, [selectedDay]: seat })
+            if (isAddingEmployee) {
+                setNewSeats({ ...seatData, [selectedDay]: seat })
+            }
         } else {
             setSelectedSeats("WFH");
             setSeatData({ ...seatData, [selectedDay]: "WFH" })
+            if (isAddingEmployee) {
+                setNewSeats({ ...seatData, [selectedDay]: "WFH" })
+            }
         }
+
+        //console.log("ssssssssssssss", seatData);
     };
 
     /*-------- onClickingUpdateSeats function is to update respective selectedManager seats in database --------*/
@@ -143,7 +285,7 @@ const Manager = () => {
                 });
                 setSelectedSeats("WFH");
                 setIsSeatsChanging(false);
-                getManagerDetails(1); // Refresh data
+                getManagerDetails(managerId); // Refresh data
                 setOpenSnackbar(true); // Show Snackbar
             } catch (err) {
                 console.error(err);
@@ -156,6 +298,7 @@ const Manager = () => {
     /*-------- renderSeats function is to get Seats from Seat component in Seat.js file --------*/
     const renderSeats = () => {
         let seats = [];
+
         /*ranges.forEach(range => {*/
         for (let i = 1; i <= manager.total; i++) {
             //console.log("selcted seats", selectedSeats);
@@ -164,6 +307,8 @@ const Manager = () => {
                     seatData={seatData}
                     day={selectedDay}
                     floor={manager.floor}
+                    newSeats={newSeats}
+                    isAddingEmployee = {isAddingEmployee}
                     totalManagerSeats={manager.seats_array}
                     employeeDetails={selectedEmployee}
                     employeesList={employees}
@@ -194,7 +339,7 @@ const Manager = () => {
     const handleClickDay = (day) => {
         setSelectedDay(day);
         if (isSeatsChanging) setSelectedSeats(seatData[day]);
-        console.log(seatData[day]);
+        //console.log(seatData[day]);
 
         if (day !== "all" && seatData[day] === 'WFH') {
             setOpenWFHSnackbar(true);
@@ -213,7 +358,9 @@ const Manager = () => {
         if (selectedDay === 'all') {
             const arrayHavingAllSeatsValues = employees.map(employee => [...new Set(Object.values(employee.seat_data))]).flat();
             const arrayAfterRemovingWFH = arrayHavingAllSeatsValues.filter(item => typeof (item) == 'number');
-            return arrayAfterRemovingWFH.length;
+            const uniqueArray = [...new Set(arrayAfterRemovingWFH)];
+            //console.log("WFHHHHHHHHHHH", uniqueArray);
+            return uniqueArray.length;
         }
 
         return employees.filter(employee => typeof (employee.seat_data[selectedDay]) === 'number').length;
@@ -327,9 +474,9 @@ const Manager = () => {
             </Grid>
 
             {/*<Button variant="contained" color="primary" onClick={allocateSeats}>Allocate Seats</Button> */}
-            {!isSeatsChanging && employees.length > 0 &&
-                <Button variant="contained" color="primary" onClick={onClickingChangeSeats}>Change Seats for {selectedEmployee.name}</Button>}
-            {isSeatsChanging && <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
+            {!isSeatsChanging && employees.length > 0 && !isAddingEmployee &&
+                <Button variant="contained" color="primary" sx={{ marginBottom: 5 }} onClick={onClickingChangeSeats}>Change Seats for {selectedEmployee.name}</Button>}
+            {isSeatsChanging && !isAddingEmployee && <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
                 <TextField
                     label="Selected Seats"
                     fullWidth
@@ -342,6 +489,67 @@ const Manager = () => {
                 <Button variant="contained" color="primary" onClick={onClickingUpdateSeats}>Update Seats for {selectedEmployee.name}</Button>
             </Paper>}
 
+
+            
+
+
+    {/* Button to open form for adding a new employee */}
+    {!isSeatsChanging && employees.length > 0 && !isAddingEmployee &&
+      <Button variant="contained" color="primary" onClick={onClickingAddNewEmployeeButton}>Add New Employee</Button>}
+
+    {/* Form for adding a new employee */}
+    {isAddingEmployee &&
+      <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
+        <TextField
+          label="First Name"
+          name="newFirstName"
+          fullWidth
+          value={newFirstName}
+          onChange={(e) => setNewFirstName(e.target.value)}
+          style={{ marginBottom: '15px' }}
+          autoFocus
+          onBlur={handleNewEmployeeBlur}
+          error={!!newFirstNameError}
+          helperText={newFirstNameError}
+          color="success"
+        />
+        <TextField
+          label="Last Name"
+          name="newLastName"
+          fullWidth
+          value={newLastName}
+          onChange={(e) => setNewLastName(e.target.value)}
+          style={{ marginBottom: '25px' }}
+          autoFocus
+          onBlur={handleNewEmployeeBlur}
+          error={!!newLastNameError}
+          helperText={newLastNameError}
+          color="success"
+        />
+        <TextField
+          label="Selected Seat for Each Day"
+          name='selectedSeats'
+          fullWidth
+          value={JSON.stringify(newSeats).slice(1, -1).replace(/,/g, ',   ').replace(/"/g, '')}
+          //onChange={(e) => setNewSeats(e.target.value.split(',').map(seat => seat.trim()))}
+          style={{ marginBottom: '25px' }}
+          InputProps={{
+            readOnly: true,
+          }}
+          autoFocus
+        />
+        <Button variant="contained" color="primary" onClick={onClickingAddEmployeeButton}>
+          Add Employee
+        </Button>
+      </Paper>
+    }
+
+
+
+
+
+
+
             <Snackbar
                 open={openSnackbar}
                 autoHideDuration={2000}
@@ -353,7 +561,7 @@ const Manager = () => {
                 </Alert>
             </Snackbar>
 
-            <Snackbar
+            { !isAddingEmployee && <Snackbar
                 open={OpenWFHSnackbar}
                 autoHideDuration={2000}
                 onClose={handleWFHSnackbarClose}
@@ -363,7 +571,14 @@ const Manager = () => {
                 <Alert onClose={handleWFHSnackbarClose} severity="success" sx={{ width: '100%' }}>
                     Employee works From Home on {selectedDay}
                 </Alert>
-            </Snackbar>
+            </Snackbar> }
+
+            
+
+
+
+
+
 
         </div>
     );

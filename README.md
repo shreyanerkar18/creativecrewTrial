@@ -24,3 +24,4 @@ View seat allocations within their team.
 ### Node.js (v14.x or higher)
 ### npm or yarn
 ### Postgress (for database)
+"# seating-allocation" 

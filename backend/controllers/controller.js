@@ -1,14 +1,33 @@
 const jwt = require('jsonwebtoken');
 const models = require('../models/models');
 
+const bcrypt = require('bcrypt'); 
+const saltRounds = 10;
+
 const JWT_SECRET = '2343434asaflajsdfkljalsibkei'; // Hardcoded JWT secret
 
-exports.signup = (req, res) => {
+exports.signup = async (req, res) => {
   console.log(req);
   console.log("Hai");
   const { firstName, lastName, email, password, role, bu, transport } = req.body;
   console.log(firstName, lastName, email, password, role, bu, transport);
-  const token = jwt.sign({ email }, JWT_SECRET);
+
+  try { 
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+       const token = jwt.sign({ email }, JWT_SECRET);
+      console.log(firstName, lastName, email, hashedPassword, role, bu, transport); 
+      models.insertUser(firstName, lastName, email, hashedPassword, role, bu, transport, (err, result) => {
+         if (err) {
+           console.error("Error inserting user:", err.message);
+         return res.status(500).json({ error: 'Error inserting data into the database' }); 
+        } 
+        res.status(201).json({ message: 'Data inserted successfully', token }); 
+      }); 
+  } catch (error) {
+       console.error("Error hashing password:", error);
+       res.status(500).json({ error: 'Server error. Please try again later.' });
+  }
+  /*const token = jwt.sign({ email }, JWT_SECRET);
 
   console.log(firstName, lastName, email, password, role, bu, transport);
 
@@ -18,23 +37,30 @@ exports.signup = (req, res) => {
       return res.status(500).json({ error: 'Error inserting data into the database' });
     }
     res.status(201).json({ message: 'Data inserted successfully', token });
-  })};
+  })*/
+ };
 
 exports.login = (req, res) => {
   const { email, password } = req.body;
 
-  models.findUserByEmailAndPassword(email, password, (err, rows) => {
+  models.findUserByEmail(email, async (err, user) => {
     if (err) {
       console.error('Error fetching user data:', err.message);
       return res.status(500).json({ error: 'Error fetching user data' });
     }
 
-    if (rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) { 
+      return res.status(401).json({ error: 'Invalid credentials' }); 
     }
 
-    const user = rows[0];
-    const newToken = jwt.sign({ email: user.email, firstName: user.first_name, lastName: user.last_name, role: user.role }, JWT_SECRET);
+    try { 
+      // Compare entered password with the stored hashed password 
+      const isPasswordValid = await bcrypt.compare(password, user.password); 
+      if (!isPasswordValid) {
+         return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+    const newToken = jwt.sign({ email: user.email, firstName: user.first_name, lastName: user.last_name, role: user.role, bu : user.bu }, JWT_SECRET);
 
     // Log the new token for debugging
     console.log('Login successful');
@@ -50,6 +76,10 @@ exports.login = (req, res) => {
       firstName: user.first_name,
       lastName: user.last_name
     });
+  } catch (error) { 
+    console.error('Error during login:', error); 
+    res.status(500).json({ error: 'Server error. Please try again later.' });
+  }
   });
 };
 
@@ -297,6 +327,22 @@ exports.addNewManager = async (req, res) => {
   }
 };
 
+exports.getManagerIdFromTable = async (req, res) => {
+  const {bu, firstName, lastName} = req.query;
+  console.log("contolleer;;;;;;", bu, firstName, lastName);
+  try {
+    const result = await models.getManagerIdFromTable(bu, firstName, lastName);
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'Manager not found' });
+    }
+    console.log(result);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 exports.getManagerFromTable = async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
@@ -333,6 +379,18 @@ exports.updateEmployeeSeatData = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.addNewEmployee = async (req, res) => {
+  const { firstName, lastName, businessUnit, seat_data, managerId } = req.body;
+
+  try {
+    const result = await models.addNewEmployee(firstName, lastName, businessUnit, seat_data, managerId);
+    res.status(200).json({ message: 'New Manager added successfully', result });
+  } catch (err) {
+    console.error('Error adding manager data:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
@@ -424,6 +482,48 @@ exports.updateToSameRow = async (req, res) => {
     //console.log(hoe);
   } catch (err) {
     console.error('Error updating seats column in seat_allocation:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+//Graphs
+exports.getManagerAllocationData = async (req, res) => {
+  try {
+    const data = await models.getManagerAllocationData();
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching manager allocation data:', error);
+    res.status(500).json({ message: 'Error fetching data' });
+  }
+};
+
+exports.getSeatAllocationData = async (req, res) => {
+  try {
+    const seatData = await models.getSeatAllocationData();
+
+    if (seatData.length === 0) {
+      return res.status(404).json({ message: 'No seat data found' });
+    }
+
+    // Respond with the seat data
+    res.status(200).json(seatData);
+  } catch (error) {
+    console.error('Error fetching seat data:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getSeatingCapacityData = async (req, res) => {
+  try {
+    const seatingData = await models.getSeatingCapacityData();
+
+    if (seatingData.length === 0) {
+      return res.status(404).json({ message: 'No seating capacity data found' });
+    }
+
+    res.status(200).json(seatingData);
+  } catch (error) {
+    console.error('Error fetching seating capacity data:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

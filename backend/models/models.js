@@ -12,14 +12,14 @@ const insertUser = (firstName, lastName, email, password, role, bu, transport, c
   });
 };
 
-const findUserByEmailAndPassword = (email, password, callback) => {
-  const sql = 'SELECT * FROM users WHERE email = $1 AND password = $2';
-  const values = [email, password];
+const findUserByEmail = (email, callback) => {
+  const sql = 'SELECT * FROM users WHERE email = $1';
+  const values = [email];
   pool.query(sql, values, (err, result) => {
     if (err) {
       return callback(err, null);
     }
-    return callback(null, result.rows);
+    return callback(null, result.rows[0]);
   });
 };
 
@@ -416,12 +416,26 @@ const updateManagerData = async (id, seats) => {
 
 const addNewManager = async (firstName, lastName, businessUnit, country, state, city, campus, floor, seats_array, hoe_id) => {
   const sql = `INSERT INTO manager_allocation (first_name, last_name, business_unit, country, state, city, campus, floor, seats_array, hoe_id)
-                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
+                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
   const values = [firstName, lastName, businessUnit, country, state, city, campus, floor, seats_array, hoe_id];
 
   try {
-    const result = await pool.query(sql, values);
-    return result;
+    const {rows} = await pool.query(sql, values);
+    return rows[0];
+  } catch (err) {
+    console.error('Error executing query', err);
+    throw err;
+  }
+};
+
+const getManagerIdFromTable = async (bu, firstName, lastName) => {
+  const sql = `SELECT id FROM  manager_allocation WHERE business_unit =$1 AND first_name = $2 AND last_name =$3`;
+  const values = [bu, firstName, lastName];
+
+  try {
+    const { rows } = await pool.query(sql, values);
+    //console.log("this is from getEmployess",rows);
+    return rows;
   } catch (err) {
     console.error('Error executing query', err);
     throw err;
@@ -472,6 +486,21 @@ const updateEmployeeSeatData = async (id, seatData) => {
     const result = await pool.query(sql, values);
     return result;
 
+  } catch (err) {
+    console.error('Error executing query', err);
+    throw err;
+  }
+};
+
+
+const addNewEmployee = async (firstName, lastName, businessUnit, seat_data, managerId) => {
+  const sql = `INSERT INTO employee_allocation (first_name, last_name, business_unit, seat_data, manager_id)
+                VALUES($1, $2, $3, $4, $5) RETURNING *`;
+  const values = [firstName, lastName, businessUnit, JSON.stringify(seat_data), managerId];
+
+  try {
+    const {rows} = await pool.query(sql, values);
+    return rows[0];
   } catch (err) {
     console.error('Error executing query', err);
     throw err;
@@ -751,9 +780,85 @@ const updateToSameRow = async (country, state, city, campus, floor, bu, seats) =
   }
 };
 
+//Graphs
+const getManagerAllocationData = async () => {
+  try {
+    const query = `
+      SELECT first_name, last_name, business_unit, country, state, city, campus, floor, seats_array 
+      FROM manager_allocation;
+    `;
+    const result = await pool.query(query);
+    return result.rows;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getSeatAllocationData = async () => {
+  try {
+    const query = `
+SELECT
+    sc.country,
+    sc.state,
+    sc.city,
+    sc.campus,
+    sc.floor,
+    sc.capacity AS total,
+    COALESCE(array_agg(sa.seat), '{}') AS allocated_seats
+FROM
+    seating_capacity sc
+LEFT JOIN (
+    SELECT
+        country,
+        state,
+        city,
+        campus,
+        floor,
+        total,
+        unnest(seats) AS seat
+    FROM
+        seat_allocation
+) sa ON sc.country = sa.country
+   AND sc.state = sa.state
+   AND sc.city = sa.city
+   AND sc.campus = sa.campus
+   AND sc.floor = sa.floor
+GROUP BY
+    sc.country,
+    sc.state,
+    sc.city,
+    sc.campus,
+    sc.floor,
+    sc.capacity,
+    sa.total
+ORDER BY
+    sc.country ASC,
+    sc.state ASC,
+    sc.city ASC,
+    sc.campus ASC,
+    sc.floor ASC;
+    `;
+    const { rows } = await pool.query(query);
+    return rows; // Return rows with seat allocation data
+  } catch (error) {
+    console.error('Error fetching seat allocation data:', error);
+    throw error; // Propagate the error
+  }
+};
+
+const getSeatingCapacityData = async () => {
+  try {
+    const query = `SELECT * FROM seating_capacity`;
+    const { rows } = await pool.query(query);
+    return rows;
+  } catch (error) {
+    throw new Error('Error fetching seating capacity data');
+  }
+};
+
 module.exports = {
   insertUser,
-  findUserByEmailAndPassword,
+  findUserByEmail,
   getBu,
   getAllocatedSetsAdmin,
   getSeatingCapacityAdminByFilter,
@@ -769,9 +874,11 @@ module.exports = {
   getManagersByHOEIdFromTable,
   updateManagerData,
   addNewManager,
+  getManagerIdFromTable,
   getManagerFromTable,
   getEmployeesByManagerIdFromTable,
   updateEmployeeSeatData,
+  addNewEmployee,
   getAllocationForBUwise,
   getAllocationForAdminMatrix,
   getManagersByFloor,
@@ -779,5 +886,8 @@ module.exports = {
   getTransportMetrix,
   getFloorConfiguration,
   getDetailsBeforeAllocation,
-  updateToSameRow
+  updateToSameRow,
+  getManagerAllocationData,
+  getSeatAllocationData,
+  getSeatingCapacityData
 };

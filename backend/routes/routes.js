@@ -30,9 +30,11 @@ router.post('/addNewManager', controller.addNewManager);
 router.get('/getSeatData', controller.getSeatData);
 
 // Manager page routes
+router.get('/getManagerIdFromTable', controller.getManagerIdFromTable);
 router.get('/getManagerFromTable/:id', controller.getManagerFromTable);
 router.get('/getEmployeesByManagerIdFromTable/:id', controller.getEmployeesByManagerIdFromTable);
 router.put('/updateEmployeeSeatData/:id', controller.updateEmployeeSeatData);
+router.post('/addNewEmployee', controller.addNewEmployee);
 
 //Matrix
 
@@ -43,5 +45,11 @@ router.get('/getBUByFloor',controller.getBUByFloor);
 router.get('/getAllocationForBUwise',controller.getAllocationForBUwise);
 router.get('/getManagersByFloor',controller.getManagersByFloor);
 router.get('/getTransportMetrix',controller.getTransportMetrix);
+
+
+//Graphs
+router.get('/getManagerAllocationData', controller.getManagerAllocationData);
+router.get('/getSeatAllocationData', controller.getSeatAllocationData);
+router.get('/getSeatingCapacityData', controller.getSeatingCapacityData);
 
 module.exports = router;

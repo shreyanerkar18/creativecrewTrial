@@ -1,10 +1,14 @@
 import React from 'react';
 import { Button } from '@mui/material';
 
-const Seat = ({ number, isSelected, onClick, employeeDetails, employeesList, isSeatsChanging, totalManagerSeats, floor, day, seatData }) => {
+const Seat = ({ number, isSelected, onClick, employeeDetails, employeesList, isSeatsChanging, totalManagerSeats, newSeats, isAddingEmployee, floor, day, seatData }) => {
 
 
-    const { seats_array } = employeeDetails;
+    let { seats_array } = employeeDetails;
+    //console.log("seats, new", seats_array, seatData)
+    if (isAddingEmployee) {
+        seats_array = newSeats;
+    }
     let employeeSeatonDay = []
     let allEmployeeSeatsOnDay = []
     //console.log("seats_array",seats_array);
