@@ -1,9 +1,14 @@
 // frontend/src/Graphs.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { baseurl } from "./utils";
 import axios from 'axios';
 import { Container, Typography } from '@mui/material';
+
+import { AuthContext } from "./AuthProvider";
+import {jwtDecode} from 'jwt-decode';
+
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -27,6 +32,10 @@ ChartJS.register(
 const GraphsbyHoe = () => {
   const [managerData, setManagerData] = useState([]);
   const [graphData, setGraphData] = useState(null);
+
+  const { token } = useContext(AuthContext);
+    const decoded = jwtDecode(token); 
+    console.log("ddd", decoded);
 
   // Fetch manager allocation data
   useEffect(() => {

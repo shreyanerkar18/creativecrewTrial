@@ -13,7 +13,7 @@ import ConfigureSeatAllocation from "./configureSeatAllocation";
 import SeatAllocation from "./seatAllocation";
 import SeatAllocationAdmin from "./seatAllocationAdmin";
 import BUWiseChart from "./Graph";
-import GraphsbyHoe from "./GraphsByHOE";
+import GraphsbyAdmin from "./GraphsByAdmin";
 
 function App() {
   return (
@@ -39,7 +39,7 @@ function App() {
               element={<ConfigureSeatAllocation />}
             ></Route>
              { /* <Route path="/graph" element={<BUWiseChart />} />  */ }
-             <Route path="/graph" element={<GraphsbyHoe />} />
+             <Route path="/graph" element={<GraphsbyAdmin />} />
           </Route>
         </Routes>
       </Router>
