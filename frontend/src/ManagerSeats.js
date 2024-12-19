@@ -3,32 +3,27 @@ import { Button } from '@mui/material';
 
 const Seat = ({ number, isSelected, onClick, employeeDetails, employeesList, isSeatsChanging, totalManagerSeats, newSeats, isAddingEmployee, floor, day, seatData }) => {
 
-
     let { seats_array } = employeeDetails;
-    //console.log("seats, new", seats_array, seatData)
     if (isAddingEmployee) {
         seats_array = newSeats;
     }
     let employeeSeatonDay = []
     let allEmployeeSeatsOnDay = []
-    //console.log("seats_array",seats_array);
-    let isDisabled = true; // to disable all seats when isSeatsChanging is false
+    let isDisabled = !isSeatsChanging; // Initially disable if seats are not changing
     let dummy;
     let allocatedSeats;
 
-    if (employeesList.length > 0) {
+    if (employeesList.length > 0 || isAddingEmployee) {
 
         if (day === 'all') {
             employeeSeatonDay = seats_array;
-        }
-        else {
+        } else {
             employeeSeatonDay = [seatData[day]];
         }
 
         if (day === "all") {
             allEmployeeSeatsOnDay = seats_array;
-        }
-        else {
+        } else {
             allEmployeeSeatsOnDay = employeesList.map(employee =>
                 employeeDetails.id === employee.id ? seatData[day] : employee.seat_data[day]
             );
@@ -39,19 +34,15 @@ const Seat = ({ number, isSelected, onClick, employeeDetails, employeesList, isS
 
         if (day === 'all') allocatedSeats = isSeatsChanging ? dummy.filter(item => !employeeDetails.seats_array.includes(item)) : dummy;
         else allocatedSeats = isSeatsChanging ? dummy.filter(item => !employeeSeatonDay.includes(item)) : dummy;
-        /* allocated seats represent no of seats allocated so that we can't select those allocated seats
-         Note: if isSeatsChanging value is true selectedManager seats will also counts as available seats(unallocated seats)*/
 
-        if (day === 'all') isDisabled = !isSeatsChanging ? isDisabled : employeeDetails.seats_array.includes(number) || (!allocatedSeats.includes(number) && (totalManagerSeats.includes(number))) ? false : isDisabled;
-        else isDisabled = !isSeatsChanging ? isDisabled : employeeSeatonDay.includes(number) || (!allocatedSeats.includes(number) && (totalManagerSeats.includes(number))) ? false : isDisabled;
-        /* the above line is to enable unallocated seats to select by HOE  to allocate to manager*/
+        if (day === 'all') {
+            isDisabled = !isSeatsChanging ? true : employeeDetails.seats_array.includes(number) || (!allocatedSeats.includes(number) && (totalManagerSeats.includes(number))) ? false : true;
+        } else {
+            isDisabled = !isSeatsChanging ? true : employeeSeatonDay.includes(number) || (!allocatedSeats.includes(number) && (totalManagerSeats.includes(number))) ? false : true;
+        }
     } else {
         allocatedSeats = [];
-        isDisabled = true;
     }
-    // console.log("dummy", dummy);
-    // console.log("allocated", allocatedSeats);
-    // console.log(isDisabled);
 
     return (
         <Button

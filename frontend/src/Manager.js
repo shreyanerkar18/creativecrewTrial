@@ -73,6 +73,7 @@ const Manager = () => {
             setNewLastNameError("");
             setIsAddingEmployee(false); // Reset adding state
             setIsSeatsChanging(false);
+            setNewSeats({"Monday" : "WFH", "Tuesday" : "WFH", "Wednesday" : "WFH", "Thursday" : "WFH", "Friday" : "WFH"});
       
             // Optionally, set the newly added employee as the selected employee
             setSelectedEmployee({ ...newEmployee, name: `${newEmployee.first_name} ${newEmployee.last_name}`,  seats_array: [...new Set(Object.values(newEmployee.seat_data))] });

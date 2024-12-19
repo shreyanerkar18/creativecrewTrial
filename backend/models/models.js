@@ -353,14 +353,14 @@ const getBUByFloor = async (req) => {
 }
 
 
-const getSeatDataByUser = async (firstName, lastName) => {
+const getSeatDataByUser = async (firstName, lastName, bu) => {
   try {
     const query = `
-            SELECT seat_data, manager_name, floor, bu, campus
-            FROM employee_details
-            WHERE first_name = $1 AND last_name = $2;
+            SELECT ma.first_name, ma.last_name, ma.floor, ma.business_unit, ma.campus, ea.seat_data
+            FROM employee_allocation AS ea LEFT JOIN manager_allocation AS ma ON ea.manager_id = ma.id
+            WHERE ea.first_name = $1 AND ea.last_name = $2 AND ea.business_unit = $3;
         `;
-    const { rows } = await pool.query(query, [firstName, lastName]);
+    const { rows } = await pool.query(query, [firstName, lastName, bu]);
     return rows; // Return seat data array
   } catch (error) {
     console.error('Error fetching seat data:', error);

@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Container, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, List, ListItem } from "@mui/material";
 import axios from 'axios';
 import { baseurl } from "./utils";
+import { AuthContext } from "./AuthProvider";
+import { jwtDecode } from 'jwt-decode';
 
 export default function Employee() {
   const [seatData, setSeatData] = useState([]);
-  const firstName = localStorage.getItem("firstName");
-  const lastName = localStorage.getItem("lastName");
+  const {token} = useContext(AuthContext);
+  const decoded = jwtDecode(token);
 
   // Function to get the current day in a format matching the keys in seat_data
   const getCurrentDay = () => {
@@ -19,20 +21,25 @@ export default function Employee() {
   useEffect(() => {
     const fetchSeatData = async () => {
       try {
+        if (token) {
+          const decoded = jwtDecode(token);
         const response = await axios.get(`${baseurl}/getSeatData`, {
-          params: { firstName, lastName }
+          params: { firstName : decoded.firstName, 
+                    lastName : decoded.lastName,
+                    bu : decoded.bu }
         });
-        //console.log('Fetched seat data:', response.data);
-        setSeatData(response.data);
-      } catch (error) {
+        console.log('Fetched seat data:', response.data);
+        const data = response.data.map(item => { item.seat_data = [item.seat_data]; return item; });
+        setSeatData(data);
+      }} catch (error) {
         console.error("Error fetching seat data:", error.response ? error.response.data : error.message);
       }
     };
 
-    if (firstName && lastName) {
+    if (token) {
       fetchSeatData();
     }
-  }, [firstName, lastName]);
+  }, [token]);
 
   const currentDay = getCurrentDay();
 
@@ -46,7 +53,7 @@ export default function Employee() {
           fontFamily: 'Roboto'
         }}
       >
-        Welcome, {firstName} {lastName}!
+        Welcome, {decoded.firstName} {decoded.lastName}!
       </Typography>
       <TableContainer component={Paper} elevation={3} style={{ marginTop: '20px' }}>
         <Table>
@@ -63,9 +70,9 @@ export default function Employee() {
             {seatData.length > 0 ? (
               seatData.map((seat, index) => (
                 <TableRow key={index} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#e8f5e9' } }}>
-                  <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.manager_name}</TableCell>
+                  <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.first_name} {seat.last_name} </TableCell>
                   <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.floor}</TableCell>
-                  <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.bu}</TableCell>
+                  <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.business_unit}</TableCell>
                   <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.campus}</TableCell>
                   <TableCell align="center" sx={{ color: '#2e7d32' }}>
                     {Array.isArray(seat.seat_data) && seat.seat_data.length > 0 ? (

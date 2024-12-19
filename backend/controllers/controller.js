@@ -84,11 +84,11 @@ exports.login = (req, res) => {
 };
 
 exports.getSeatData = async (req, res) => {
-  const { firstName, lastName } = req.query;
+  const { firstName, lastName, bu } = req.query;
 
   try {
     // Call the model function to get seat data
-    const seatData = await models.getSeatDataByUser(firstName, lastName);
+    const seatData = await models.getSeatDataByUser(firstName, lastName, bu);
 
     if (seatData.length === 0) {
       return res.status(404).json({ message: 'No seat data found' });
