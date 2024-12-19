@@ -218,11 +218,11 @@ export default function Signup() {
                   color="success"
                   disabled={formData.role === 'admin'}
                 >
-                  <MenuItem value="cloud">Cloud</MenuItem>
-                  <MenuItem value="service">Service</MenuItem>
-                  <MenuItem value="sales">Sales</MenuItem>
-                  <MenuItem value="Group Infrastructure Services">Group Infrastructure Services</MenuItem>
-                  <MenuItem value="Risk and Information">Risk and Information</MenuItem>
+                  <MenuItem value="Enablement Services">Enablement Services</MenuItem>
+                  <MenuItem value="Consumer Lending">Consumer Lending</MenuItem>
+                  <MenuItem value="Consumer Relations">Consumer Relations</MenuItem>
+                  <MenuItem value="CTO">CTO</MenuItem>
+                  <MenuItem value="CSO">CSO</MenuItem>
                 </TextField>
               </Grid>
             </Grid>

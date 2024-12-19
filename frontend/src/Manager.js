@@ -499,7 +499,7 @@ const Manager = () => {
 
 
     {/* Button to open form for adding a new employee */}
-    {!isSeatsChanging && employees.length > 0 && !isAddingEmployee &&
+    {!isSeatsChanging && employees.length >= 0 && !isAddingEmployee &&
       <Button variant="contained" color="primary" onClick={onClickingAddNewEmployeeButton}>Add New Employee</Button>}
 
     {/* Form for adding a new employee */}
