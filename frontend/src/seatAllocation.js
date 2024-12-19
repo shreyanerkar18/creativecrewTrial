@@ -77,7 +77,7 @@ const SeatAllocation = () => {
     setAllocateSeatSecFlag(false);
 
   }
-  console.log(allocationData, "seats", values);
+  //console.log(allocationData, "seats", values);
   return (
     <div className="seatAllocationContainer">
       <Grid container spacing={2} justifyContent={"center"}>

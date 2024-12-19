@@ -1,7 +1,7 @@
 const pool = require('./db');
 
 const insertUser = (firstName, lastName, email, password, role, bu, transport, callback) => {
-  console.log("model", firstName, lastName, email, password, role, bu, transport);
+  //console.log("model", firstName, lastName, email, password, role, bu, transport);
   const sql = "INSERT INTO users (first_name, last_name, email, password, bu, transport, role) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *";
   const values = [firstName, lastName, email, password, bu, transport, role];
   pool.query(sql, values, (err, result) => {
@@ -170,7 +170,7 @@ const getAllocatedCount = async (values, whereClause, type) => {
   const query = getQuery(type, whereClause)
   try {
     const { rows } = await pool.query(query, values);
-    console.log(rows)
+    //console.log(rows)
     return rows;
   } catch (err) {
     console.error('Error executing query', err);
@@ -275,7 +275,7 @@ const getHOEManagerAllocatedQuery = async (whereClause, type) => {
 }
 const getHOEManagerAllocatedCount = async (whereClause, values, type) => {
   const query = await getHOEManagerAllocatedQuery(whereClause, type);
-  console.log(query, "query", values)
+  //console.log(query, "query", values)
   try {
     const { rows } = await pool.query(query, values);
     return rows;
@@ -365,6 +365,21 @@ const getSeatDataByUser = async (firstName, lastName) => {
   } catch (error) {
     console.error('Error fetching seat data:', error);
     throw error; // Propagate the error to be handled in the controller
+  }
+};
+
+
+const getHoeIdFromTable = async (bu) => {
+  const sql = `SELECT id FROM  business_unit WHERE name=$1`;
+  const values = [bu];
+
+  try {
+    const { rows } = await pool.query(sql, values);
+    //console.log("this is from getEmployess",rows);
+    return rows;
+  } catch (err) {
+    console.error('Error executing query', err);
+    throw err;
   }
 };
 
@@ -508,7 +523,7 @@ const addNewEmployee = async (firstName, lastName, businessUnit, seat_data, mana
 };
 
 const getBuQuery = (whereClause) => {
-  console.log(whereClause);
+  //console.log(whereClause);
   let sql = `select sa.bu_id,bu.name as bu_name,sa.country,sa.state,sa.city,sa.campus,sa.floor,SUM(array_length(sa.seats, 1)) as total,SUM(array_length(ma.seats_array, 1)) as allocated,SUM(array_length(sa.seats, 1)) - SUM(array_length(ma.seats_array, 1)) AS unallocated from seat_allocation as sa INNER JOIN manager_allocation as ma ON(sa.bu_id=ma.hoe_id) INNER JOIN business_unit as bu ON(bu.id=ma.hoe_id) ${whereClause}
         group by sa.bu_id,sa.country,sa.state,sa.city,sa.campus,sa.floor,bu.id`;
   return sql;
@@ -517,7 +532,7 @@ const getAllocatedBuByFloorCount = async (values, whereClause) => {
   const query = getBuQuery(whereClause);
   try {
     const { rows } = await pool.query(query, values);
-    console.log(rows);
+    //console.log(rows);
     return rows;
   } catch (err) {
     console.error("Error executing query", err);
@@ -745,7 +760,7 @@ const getFloorConfiguration = async (country, state, city, campus, floor) => {
 
   try {
     const { rows } = await pool.query(sql, values);
-    console.log(rows);
+    //console.log(rows);
     return rows;
   } catch (err) {
     console.error('Error executing query', err);
@@ -759,7 +774,7 @@ const getDetailsBeforeAllocation = async (country, state, city, campus, floor, b
 
   try {
     const { rows } = await pool.query(sql, values);
-    console.log(rows);
+    //console.log(rows);
     return rows;
   } catch (err) {
     console.error('Error executing query', err);
@@ -781,13 +796,114 @@ const updateToSameRow = async (country, state, city, campus, floor, bu, seats) =
 };
 
 //Graphs
-const getManagerAllocationData = async () => {
+const getManagerAllocationData = async (hoeId) => {
   try {
-    const query = `
-      SELECT first_name, last_name, business_unit, country, state, city, campus, floor, seats_array 
-      FROM manager_allocation;
+    const sql = `
+WITH manager_seats AS (
+    SELECT 
+        id,
+        first_name,
+        last_name,
+        business_unit,
+        country,
+        state,
+        city,
+        campus,
+        floor,
+        seats_array,
+        hoe_id
+    FROM 
+        manager_allocation
+    WHERE 
+        hoe_id = $1
+    UNION ALL
+    SELECT 
+        NULL AS id,
+        '' AS first_name,
+        '' AS last_name,
+        '' AS business_unit,
+        country,
+        state,
+        city,
+        campus,
+        floor,
+        NULL AS seats_array,
+        $1 AS hoe_id
+    FROM
+        seat_allocation
+    WHERE NOT EXISTS (
+        SELECT 1 
+        FROM manager_allocation 
+        WHERE 
+            country = seat_allocation.country 
+            AND state = seat_allocation.state
+            AND city = seat_allocation.city 
+            AND campus = seat_allocation.campus 
+            AND floor = seat_allocation.floor
+            AND hoe_id = $1
+    )
+)
+SELECT 
+    ms.id,
+    ms.first_name,
+    ms.last_name,
+    ms.business_unit,
+    ms.country,
+    ms.state,
+    ms.city,
+    ms.campus,
+    ms.floor,
+    COALESCE(ms.seats_array, '{}') AS seats_array,
+    ms.hoe_id,
+    COALESCE(array_agg(DISTINCT sa.seat), '{}') AS allocated_seats
+FROM 
+    manager_seats ms
+LEFT JOIN (
+    SELECT 
+        country,
+        state,
+        city,
+        campus,
+        floor,
+        bu_id,
+        unnest(seats) AS seat
+    FROM 
+        seat_allocation
+) sa
+ON 
+    ms.country = sa.country
+    AND ms.state = sa.state
+    AND ms.city = sa.city
+    AND ms.campus = sa.campus
+    AND ms.floor = sa.floor
+    AND ms.hoe_id = sa.bu_id
+WHERE 
+    ms.hoe_id = $1
+    AND sa.bu_id = $1
+GROUP BY 
+    ms.id,
+    ms.first_name,
+    ms.last_name,
+    ms.business_unit,
+    ms.country,
+    ms.state,
+    ms.city,
+    ms.campus,
+    ms.floor,
+    ms.seats_array,
+    ms.hoe_id
+ORDER BY
+    ms.country ASC,
+    ms.state ASC,
+    ms.city ASC,
+    ms.campus ASC,
+    ms.floor ASC;
+
+
+
     `;
-    const result = await pool.query(query);
+    const values = [hoeId]
+    const result = await pool.query(sql, values);
     return result.rows;
   } catch (error) {
     throw error;
@@ -856,6 +972,137 @@ const getSeatingCapacityData = async () => {
   }
 };
 
+const getManagerIdForGraph = async (bu, firstName, lastName) => {
+  try {
+    const sql = `
+    SELECT * FROM manager_allocation WHERE business_unit = $1 AND first_name = $2 AND last_name = $3
+    `;
+    const values = [bu, firstName, lastName]
+    const result = await pool.query(sql, values);
+    return result.rows;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getGraphDetailsForManager = async (managerId) => {
+  try {
+    const sql = `
+WITH seat_data AS (
+    SELECT
+        manager_id,
+        jsonb_each_text(seat_data) AS seat_info
+    FROM
+        employee_allocation
+    WHERE
+        manager_id = $1
+),
+seats_per_day AS (
+    SELECT
+        manager_id,
+        (seat_info).key AS day,
+        (seat_info).value::INT AS seat
+    FROM
+        seat_data
+    WHERE
+        (seat_info).value != 'WFH'
+),
+all_days AS (
+    SELECT unnest(ARRAY['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) AS day
+),
+manager_info AS (
+    SELECT
+        ma.id,
+        ma.first_name,
+        ma.last_name,
+        ma.business_unit,
+        ma.country,
+        ma.state,
+        ma.city,
+        ma.campus,
+        ma.floor,
+        ma.seats_array,
+        ma.hoe_id
+    FROM
+        manager_allocation ma
+    WHERE
+        ma.id = $1
+)
+SELECT
+    ad.day,
+    mi.id AS manager_id,
+    mi.first_name AS manager_first_name,
+    mi.last_name AS manager_last_name,
+    mi.business_unit AS manager_business_unit,
+    mi.country,
+    mi.state,
+    mi.city,
+    mi.campus,
+    mi.floor,
+    COALESCE(mi.seats_array, '{}') AS manager_seats,
+    COALESCE(array_agg(DISTINCT spd.seat), '{}') AS occupied_seats
+FROM
+    manager_info mi
+CROSS JOIN all_days ad
+LEFT JOIN (
+    SELECT
+        country,
+        state,
+        city,
+        campus,
+        floor,
+        bu_id,
+        unnest(seats) AS seat
+    FROM
+        seat_allocation
+) sa
+ON
+    mi.country = sa.country
+    AND mi.state = sa.state
+    AND mi.city = sa.city
+    AND mi.campus = sa.campus
+    AND mi.floor = sa.floor
+    AND mi.hoe_id = sa.bu_id
+LEFT JOIN seats_per_day spd
+ON
+    mi.id = spd.manager_id
+    AND ad.day = spd.day
+GROUP BY
+    ad.day,
+    mi.id,
+    mi.first_name,
+    mi.last_name,
+    mi.business_unit,
+    mi.country,
+    mi.state,
+    mi.city,
+    mi.campus,
+    mi.floor,
+    mi.seats_array,
+    mi.hoe_id
+ORDER BY
+    CASE ad.day
+        WHEN 'Monday' THEN 1
+        WHEN 'Tuesday' THEN 2
+        WHEN 'Wednesday' THEN 3
+        WHEN 'Thursday' THEN 4
+        WHEN 'Friday' THEN 5
+        ELSE 6
+    END,
+    mi.country ASC,
+    mi.state ASC,
+    mi.city ASC,
+    mi.campus ASC,
+    mi.floor ASC;
+    `;
+    const values = [managerId]
+    const result = await pool.query(sql, values);
+    return result.rows;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   insertUser,
   findUserByEmail,
@@ -870,6 +1117,7 @@ module.exports = {
   getAllocationForHOEMatrix,
   getBUByFloor,
   getSeatDataByUser,
+  getHoeIdFromTable,
   getHOEFromTable,
   getManagersByHOEIdFromTable,
   updateManagerData,
@@ -889,5 +1137,7 @@ module.exports = {
   updateToSameRow,
   getManagerAllocationData,
   getSeatAllocationData,
-  getSeatingCapacityData
+  getSeatingCapacityData,
+  getManagerIdForGraph,
+  getGraphDetailsForManager
 };

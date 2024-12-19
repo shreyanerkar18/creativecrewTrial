@@ -1,0 +1,171 @@
+/* General Styles */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 0;
+}
+
+/* Container for all sections */
+.allocation-container {
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  max-width: 1200px;
+  color: #333;
+}
+
+h1, h2 {
+  color: #333;
+  text-align: center;
+}
+
+h3 {
+  color: #333;
+  text-align: left;
+  margin-left: 10px;
+}
+
+/* Input Groups */
+.input-group {
+  margin: 15px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.input-group label {
+  font-size: 16px;
+  color: #7f8c8d;
+  flex: 1;
+}
+
+.input-group input {
+  padding: 8px 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 60%;
+}
+
+.input-group input:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
+/* Button */
+.allocate-button {
+  padding: 12px 20px;
+  background-color: #ff6347;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  width: auto;
+  margin: 0 auto;
+  display: block;
+}
+
+.allocate-button:hover {
+  background-color: #2980b9;
+}
+
+/* Business Unit Table Styles */
+.bu-table {
+  width: 100%;
+  margin-top: 30px;
+  border-collapse: collapse;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.bu-table th,
+.bu-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.bu-table th {
+  background-color: #3498db;
+  color: white;
+}
+
+.bu-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+.bu-table td {
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+/* Campus Table */
+.campus-table {
+  margin-top: 30px;
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.campus-table th,
+.campus-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.campus-table th {
+  background-color: #3498db;
+  color: white;
+}
+
+.campus-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+.campus-table td {
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.total-row {
+  font-weight: bold;
+  background-color: #f2f2f2;
+}
+
+.total-row td {
+  text-align: right;
+}
+
+.accommodation-message {
+  background-color: #e7f7e7;
+  padding: 5px;
+  margin-top: 10px;
+  font-weight: bold;
+  color: green;
+  text-align: center;
+}
+.totals-row {
+  font-weight: bold;
+  background-color: #f2f2f2;
+}
+
+.shortfall-popup{
+  color: red;
+}
+
+.minimum-seats-message {
+  background-color: #e3f2fd; /* Light blue background */
+  color: #1565c0; /* Dark blue text */
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 15px 0;
+  text-align: center;
+  border: 1px solid #bbdefb;
+}
+

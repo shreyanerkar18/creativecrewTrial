@@ -75,11 +75,11 @@ export default function Signup() {
       transport,
     };
 
-    console.log("Submitting data:", dataToSubmit); // Log data being sent
+    //console.log("Submitting data:", dataToSubmit); // Log data being sent
 
     try {
       const response = await axios.post(`http://localhost:8080/signup`, dataToSubmit);
-      console.log(response.data);
+      //console.log(response.data);
       navigate("/");
       // Redirect or handle success
     } catch (error) {
@@ -210,12 +210,13 @@ export default function Signup() {
                   id="bu"
                   label="Business Unit"
                   name="bu" // Updated to match backend
-                  value={formData.bu}
+                  value={formData.role === 'admin' ? '' : formData.bu}
                   onBlur={handleBlur}
                   onChange={handleChange}
                   error={!!errors.bu}
                   helperText={errors.bu}
                   color="success"
+                  disabled={formData.role === 'admin'}
                 >
                   <MenuItem value="cloud">Cloud</MenuItem>
                   <MenuItem value="service">Service</MenuItem>

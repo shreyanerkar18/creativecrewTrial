@@ -12,7 +12,7 @@ export default function Employee() {
   const getCurrentDay = () => {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
-    console.log(days[today-1]);
+    //console.log(days[today-1]);
     return days[today - 1] || 'Monday'; // Default to Monday if day not found
   };
 
@@ -22,7 +22,7 @@ export default function Employee() {
         const response = await axios.get(`${baseurl}/getSeatData`, {
           params: { firstName, lastName }
         });
-        console.log('Fetched seat data:', response.data);
+        //console.log('Fetched seat data:', response.data);
         setSeatData(response.data);
       } catch (error) {
         console.error("Error fetching seat data:", error.response ? error.response.data : error.message);

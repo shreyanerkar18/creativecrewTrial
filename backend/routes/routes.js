@@ -21,6 +21,7 @@ router.get('/getDetailsBeforeAllocation', controller.getDetailsBeforeAllocation)
 router.put('/updateToSameRow', controller.updateToSameRow);
 
 //HOE page routes
+router.get('/getHoeIdFromTable', controller.getHoeIdFromTable);
 router.get('/getHOEFromTable/:id', controller.getHOEFromTable);
 router.get('/getManagersByHOEIdFromTable/:id', controller.getManagersByHOEIdFromTable);
 router.put('/updateManagerData/:id', controller.updateManagerData);
@@ -51,5 +52,7 @@ router.get('/getTransportMetrix',controller.getTransportMetrix);
 router.get('/getManagerAllocationData', controller.getManagerAllocationData);
 router.get('/getSeatAllocationData', controller.getSeatAllocationData);
 router.get('/getSeatingCapacityData', controller.getSeatingCapacityData);
+router.get('/getManagerIdForGraph', controller.getManagerIdForGraph);
+router.get('/getGraphDetailsForManager', controller.getGraphDetailsForManager);
 
 module.exports = router;

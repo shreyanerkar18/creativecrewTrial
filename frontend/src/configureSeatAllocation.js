@@ -147,8 +147,8 @@ const ConfigureSeatAllocation = () => {
           city: values.city
         }
       });
-      console.log(response.data);
-      console.log(response.data.length);
+      // console.log(response.data);
+      // console.log(response.data.length);
 
       if (response.data.length === 0) {
         validatingDataWhileSeatConfiguration();

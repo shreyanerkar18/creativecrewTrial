@@ -7,15 +7,15 @@ const saltRounds = 10;
 const JWT_SECRET = '2343434asaflajsdfkljalsibkei'; // Hardcoded JWT secret
 
 exports.signup = async (req, res) => {
-  console.log(req);
-  console.log("Hai");
+  //console.log(req);
+  //console.log("Hai");
   const { firstName, lastName, email, password, role, bu, transport } = req.body;
-  console.log(firstName, lastName, email, password, role, bu, transport);
+  //console.log(firstName, lastName, email, password, role, bu, transport);
 
   try { 
       const hashedPassword = await bcrypt.hash(password, saltRounds);
        const token = jwt.sign({ email }, JWT_SECRET);
-      console.log(firstName, lastName, email, hashedPassword, role, bu, transport); 
+      //console.log(firstName, lastName, email, hashedPassword, role, bu, transport); 
       models.insertUser(firstName, lastName, email, hashedPassword, role, bu, transport, (err, result) => {
          if (err) {
            console.error("Error inserting user:", err.message);
@@ -63,11 +63,11 @@ exports.login = (req, res) => {
     const newToken = jwt.sign({ email: user.email, firstName: user.first_name, lastName: user.last_name, role: user.role, bu : user.bu }, JWT_SECRET);
 
     // Log the new token for debugging
-    console.log('Login successful');
-    console.log('Generated JWT Token:', newToken);
-    console.log('Role:', user.role);
-    console.log('First Name:', user.first_name);
-    console.log('Last Name:', user.last_name);
+    // console.log('Login successful');
+    // console.log('Generated JWT Token:', newToken);
+    // console.log('Role:', user.role);
+    // console.log('First Name:', user.first_name);
+    // console.log('Last Name:', user.last_name);
 
     res.status(200).json({
       message: 'Login successful',
@@ -109,7 +109,7 @@ exports.getBu = async (req, res) => {
       return res.status(404).json({ message: 'Bu not found' });
     }
     res.status(200).json(Bu);
-    console.log(Bu);
+    //console.log(Bu);
   } catch (err) {
     console.error('Error fetching Bunames:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -123,7 +123,7 @@ exports.getAllocatedSetsAdmin = async (req, res) => {
       return res.status(404).json({ message: 'allocatedSeats not found' });
     }
     res.status(200).json(allocatedSeats);
-    console.log(allocatedSeats);
+    //console.log(allocatedSeats);
   } catch (err) {
     console.error('Error fetching allocatedSeats:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -137,7 +137,7 @@ exports.getSeatingCapacityAdmin = async (req, res) => {
       return res.status(404).json({ message: 'getCapacity not found' });
     }
     res.status(200).json(getCapacity);
-    console.log(getCapacity);
+    //console.log(getCapacity);
   } catch (err) {
     console.error('Error fetching getCapacity:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -149,7 +149,7 @@ exports.postSeatingCapacityAdmin = async (req, res) => {
   try {
     const createCapacityMsg = await models.createSeatingCapacityAdmin(requestBody);
     res.status(200).json({ msg: 'created succesfully' });
-    console.log(createCapacityMsg);
+    //console.log(createCapacityMsg);
   } catch (err) {
     console.error('Error fetching createCapacity:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -165,7 +165,7 @@ exports.updateSeatingCapacityAdmin = async (req, res) => {
     }
     const updateCapacityMsg = await models.updateSeatingCapacityAdmin(id, capacity);
     res.status(200).json({ msg: 'updated succesfully' });
-    console.log(updateCapacityMsg);
+    //console.log(updateCapacityMsg);
   } catch (err) {
     console.error('Error fetching update Capacity:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -180,7 +180,7 @@ exports.deleteSeatingCapacityAdmin = async (req, res) => {
     }
     const deleteCapacityMsg = await models.deleteSeatingCapacityAdmin(id);
     res.status(200).json({ msg: 'deleted succesfully' });
-    console.log(deleteCapacityMsg);
+    //console.log(deleteCapacityMsg);
   } catch (err) {
     console.error('Error fetching delete Capacity:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -188,12 +188,12 @@ exports.deleteSeatingCapacityAdmin = async (req, res) => {
 }
 
 exports.createAllocatedSetsAdmin = async (req, res) => {
-  console.log(req.body)
+  //console.log(req.body)
   const requestBody = req.body;
   try {
     const createCapacityMsg = await models.createAllocatedSetsAdmin(requestBody);
     res.status(200).json({ msg: 'created succesfully' });
-    console.log(createCapacityMsg);
+    //console.log(createCapacityMsg);
   } catch (err) {
     console.error('Error fetching createCapacity:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -209,7 +209,7 @@ exports.getSeatingCapacityAdminByFilter = async (req, res) => {
       return res.status(404).json({ message: 'allocatedSeats not found' });
     }
     res.status(200).json(allocatedSeats);
-    console.log(allocatedSeats);
+    //console.log(allocatedSeats);
   } catch (err) {
     console.error('Error fetching allocatedSeats:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -249,7 +249,7 @@ exports.getBUByFloor = async (req, res) => {
       return res.status(404).json({ message: 'BU not found' });
     }
     res.status(200).json(bus);
-    console.log(bus);
+    //console.log(bus);
   } catch (err) {
     console.error('Error fetching BU:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -268,6 +268,22 @@ exports.getAllocationForBUwise = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 }
+
+exports.getHoeIdFromTable = async (req, res) => {
+  const {bu} = req.query;
+  //console.log("contolleer;;;;;;", bu);
+  try {
+    const result = await models.getHoeIdFromTable(bu);
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'Hoe not found' });
+    }
+    //console.log(result);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 exports.getHOEFromTable = async (req, res) => {
   const id = parseInt(req.params.id, 10);
@@ -329,13 +345,13 @@ exports.addNewManager = async (req, res) => {
 
 exports.getManagerIdFromTable = async (req, res) => {
   const {bu, firstName, lastName} = req.query;
-  console.log("contolleer;;;;;;", bu, firstName, lastName);
+  //console.log("contolleer;;;;;;", bu, firstName, lastName);
   try {
     const result = await models.getManagerIdFromTable(bu, firstName, lastName);
     if (result.length === 0) {
       return res.status(404).json({ message: 'Manager not found' });
     }
-    console.log(result);
+    //console.log(result);
     res.status(200).json(result);
   } catch (err) {
     console.error(err);
@@ -429,7 +445,7 @@ exports.getTransportMetrix = async (req, res) => {
       return res.status(404).json({ message: 'Data not found' });
     }
     res.status(200).json(data);
-    console.log(data);
+    //console.log(data);
   } catch (err) {
     console.error('Error fetching data:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -454,7 +470,7 @@ exports.getFloorConfiguration = async (req, res) => {
 
 exports.getDetailsBeforeAllocation = async (req, res) => {
   const { country, state, city, campus, floor, businessId } = req.query;
-  console.log(country, state, city, campus, floor, businessId);
+  //console.log(country, state, city, campus, floor, businessId);
 
   try {
     const result = await models.getDetailsBeforeAllocation(country, state, city, campus, floor, businessId);
@@ -471,7 +487,7 @@ exports.getDetailsBeforeAllocation = async (req, res) => {
 
 exports.updateToSameRow = async (req, res) => {
   const { country, state, city, campus, floor, bu, seats } = req.body;
-  console.log(country, state, city, campus, floor, bu, seats);
+  //console.log(country, state, city, campus, floor, bu, seats);
 
   try {
     const result = await models.updateToSameRow(country, state, city, campus, floor, bu, seats);
@@ -488,8 +504,10 @@ exports.updateToSameRow = async (req, res) => {
 
 //Graphs
 exports.getManagerAllocationData = async (req, res) => {
+  const {hoeId} = req.query;
+
   try {
-    const data = await models.getManagerAllocationData();
+    const data = await models.getManagerAllocationData(hoeId);
     res.json(data);
   } catch (error) {
     console.error('Error fetching manager allocation data:', error);
@@ -525,5 +543,30 @@ exports.getSeatingCapacityData = async (req, res) => {
   } catch (error) {
     console.error('Error fetching seating capacity data:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getManagerIdForGraph = async (req, res) => {
+  const {bu, firstName, lastName} = req.query;
+
+  try {
+    const data = await models.getManagerIdForGraph(bu, firstName, lastName);
+    //console.log(data);
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching manager allocation data:', error);
+    res.status(500).json({ message: 'Error fetching data' });
+  }
+};
+
+exports.getGraphDetailsForManager = async (req, res) => {
+  const {managerId} = req.query;
+
+  try {
+    const data = await models.getGraphDetailsForManager(managerId);
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching manager allocation data:', error);
+    res.status(500).json({ message: 'Error fetching data' });
   }
 };

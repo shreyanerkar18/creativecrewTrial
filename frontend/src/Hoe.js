@@ -2,43 +2,42 @@ import React, { useEffect, useState, useCallback, useContext } from 'react';
 import axios from 'axios';
 import {
   Button, Grid, Typography, Select, MenuItem, InputLabel, FormControl, Paper, TextField, Box, Snackbar, Alert,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Input
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import Seat from './Seat';
 import { baseurl } from './utils';
 import { AuthContext } from "./AuthProvider";
-import {jwtDecode} from 'jwt-decode'
+import { jwtDecode } from 'jwt-decode';
 
 const Hoe = () => {
   const [HoeList, setHoeList] = useState([]);
-  const [HOE, setHoe] = useState({});  //to store and update HOE
+  const [HOE, setHoe] = useState({});  // to store and update HOE
   const [locations, setLocations] = useState([]);
-
-  const [managers, setManagers] = useState([]); //to store and update all managers under HOE
-  const [selectedManager, setSelectedManager] = useState('');  //to store and update selected manager in drop-down
-  const [selectedSeats, setSelectedSeats] = useState([]);   //to store seats while selecting
-  const [isSeatsChanging, setIsSeatsChanging] = useState(false); //we cannot select seats when isSeatsChanging is false
+  const [managers, setManagers] = useState([]); // to store and update all managers under HOE
+  const [selectedManager, setSelectedManager] = useState('');  // to store and update selected manager in drop-down
+  const [selectedSeats, setSelectedSeats] = useState([]);   // to store seats while selecting
+  const [isSeatsChanging, setIsSeatsChanging] = useState(false); // we cannot select seats when isSeatsChanging is false
   const [isAddingManager, setIsAddingManager] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [firstNameError, setFirstNameError] = useState("");
   const [lastNameError, setLastNameError] = useState("");
-
+  const [seatCount, setSeatCount] = useState(0); // Added state for seat count
+  const [selectedSeatCount, setSelectedSeatCount] = useState(0); // Added state for selected seat count
   const [openSnackbar, setOpenSnackbar] = useState(false); // to show a small popup when we update table in database with content "Data Updated Successfully"
-
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedCampus, setSelectedCampus] = useState('');
   const [selectedFloor, setSelectedFloor] = useState('');
+  const [hoeId, setHoeId] = useState('');
 
   const { token } = useContext(AuthContext);
-  const decoded = jwtDecode(token); 
-  // console.log(decoded.bu);
-  const hoe_bu = decoded.bu === "cloud" ? 1 : 
-                decoded.bu === "service" ? 2 : 
-                decoded.bu === "sales" ? 3 : 
-                decoded.bu === "Group Infrastructure Services" ? 4 : 5;
+  // const decoded = jwtDecode(token);
+  // const hoe_bu = decoded.bu === "cloud" ? 1 :
+  //   decoded.bu === "service" ? 2 :
+  //     decoded.bu === "sales" ? 3 :
+  //       decoded.bu === "Group Infrastructure Services" ? 4 : 5;
 
   /*-------- these constants are used to show respected values in the dropdowns --------*/
   const countries = [...new Set(locations.map(location => location.country))];
@@ -53,8 +52,33 @@ const Hoe = () => {
   };
 
   useEffect(() => {
-    getHOEDetails(hoe_bu);  // Aslo change id in line 110 && 141
+    const fetchHoeDetails = async () => {
+      if (token) {
+        const decoded = jwtDecode(token);
+        try {
+          // Use decoded details in the query body
+          const response1 = await axios.get(`${baseurl}/getHoeIdFromTable`, {
+            params: { // Using params to send query parameters
+              bu : decoded.bu,
+            }
+          });
+
+          const response_data = response1;
+          //console.log(response_data);
+          setHoeId(response_data.data[0].id);
+        } catch (err) {
+          console.error('Error fetching data:', err);
+        }
+      }
+    };
+
+    fetchHoeDetails(); // Call the async function
   }, []);
+
+  useEffect(() => {
+    hoeId !== "" && getHOEDetails(hoeId);  // Also change id in line 110 && 141
+  }, [hoeId]);
+
 
   /*-------- getHOEDetails function get HOE and Managers details from database --------*/
   const getHOEDetails = async (id) => {
@@ -71,10 +95,6 @@ const Hoe = () => {
         setSelectedCampus(response1.data[0].campus),
         setSelectedFloor(response1.data[0].floor),
       ]);
-
-      // console.log(selectedCampus);
-      // console.log(selectedFloor);
-      // console.log(response1.data);
 
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -93,19 +113,12 @@ const Hoe = () => {
         }
       });
 
-      //console.log("response 2", response2.data);
-      // console.log('Managers data:', response2.data);
-      // console.log("Selected Manager:", response2.data[0]);
-
       setManagers(response2.data.map(item => ({ ...item, name: item.first_name + " " + item.last_name })));
-      console.log(response2.data.map(item => ({ ...item, name: item.first_name + " " + item.last_name })));
-      console.log("ff", firstName, 'll', lastName);
       if (response2.data.length > 0) {
-        console.log("first", firstName, "last", lastName);
         if (selectedManager === '' && !isAddingManager) {
           setSelectedManager({ ...response2.data[0], name: response2.data[0].first_name + " " + response2.data[0].last_name });
         } else {
-          const managerDetails = (firstName !== '' && lastName !== '') ? response2.data.filter(item => item.first_name === firstName && item.last_name === lastName) : response2.data.filter(item => item.id === selectedManager.id);
+          const managerDetails = (firstName !== ''   && lastName !== '') ? response2.data.filter(item => item.first_name === firstName && item.last_name === lastName) : response2.data.filter(item => item.id === selectedManager.id);
           setFirstName("");
           setLastName("");
           if (managerDetails.length === 0) {
@@ -125,8 +138,8 @@ const Hoe = () => {
   }, [selectedFloor, selectedCampus, selectedManager]);
 
   useEffect(() => {
-    if (selectedFloor !== "") {
-      getManagerDetails(hoe_bu);  // Aslo change id in line 41 && 141. yOU HAVE TO CHANGE ID AT FOUR PLACES
+    if (selectedFloor !== "" && hoeId !== "") {
+      getManagerDetails(hoeId);  // Also change id in line 41 && 141. You have to change id at four places
     }
   }, [selectedFloor]);
 
@@ -143,12 +156,53 @@ const Hoe = () => {
 
   /*-------- handleSeatClick function is to update selectedSeats upon selecting/deselecting a seat --------*/
   const handleSeatClick = (seat) => {
+  if (isAddingManager) {
+    // Check if seatCount is set before allowing seat selection
+    if (seatCount <= 0) {
+      alert('Please provide a seat count before selecting seats.');
+      return;
+    }
+
+    // Check if the seat is already selected
+    if (selectedSeats.includes(seat)) {
+      // If it's a deselect action, simply remove the seat and decrease the selected seat count
+      setSelectedSeats(selectedSeats.filter(s => s !== seat));
+      setSelectedSeatCount(selectedSeatCount - 1);
+    } else {
+      // If it's a select action
+      if (selectedSeatCount >= seatCount) {
+        alert(`You have already selected the required number of seats: ${seatCount}`);
+        return;
+      }
+      let count = seatCount - selectedSeatCount;
+      let newSelectedSeats = [];
+
+      // Check the contiguous available seats starting from the clicked seat
+      for (let i = seat; i < seat + count; i++) {
+        // Stop selection if an allocated seat is encountered
+        if (!HOE.seats.includes(i) || selectedSeats.includes(i) || managers.some(manager => manager.seats_array.includes(i))) break;
+        newSelectedSeats.push(i);
+      }
+
+      // Only add new seats that are contiguous and available
+      setSelectedSeats([...selectedSeats, ...newSelectedSeats]);
+      setSelectedSeatCount(selectedSeatCount + newSelectedSeats.length);
+    }
+  } else {
+    // Normal add seat operation
     if (!selectedSeats.includes(seat)) {
       setSelectedSeats([...selectedSeats, seat]);
+      setSelectedSeatCount(selectedSeatCount + 1);
     } else {
       setSelectedSeats(selectedSeats.filter(s => s !== seat));
+      setSelectedSeatCount(selectedSeatCount - 1);
     }
-  };
+  }
+};
+
+  
+  
+  
 
   /*-------- onClickingUpdateSeats function is to update respective selectedManager seats in database --------*/
   const onClickingUpdateSeats = async () => {
@@ -160,20 +214,19 @@ const Hoe = () => {
         });
         setSelectedSeats([]);
         setIsSeatsChanging(false);
-        getManagerDetails(hoe_bu); // Refresh data  // Aslo change id in line 41 && 110
+        getManagerDetails(hoeId); // Refresh data  // Also change id in line 41 && 110
         setOpenSnackbar(true); // Show Snackbar
       } catch (err) {
         console.error(err);
       }
     } else {
-      alert("Please select atleast one seat.");
+      alert("Please select at least one seat.");
     }
   };
 
   /*-------- renderSeats function is to get Seats from Seat component in Seat.js file --------*/
   const renderSeats = () => {
     let seats = [];
-    /*ranges.forEach(range => {*/
     for (let i = 1; i <= HOE.total; i++) {
       seats.push(
         <Seat
@@ -189,12 +242,11 @@ const Hoe = () => {
           onClick={() => handleSeatClick(i)}
         />
       );
-    }//}
-    //)
+    }
     return seats;
   };
 
-  /*-------- onClickingChangeSeats function enables all selectedManager and available seats and we will able to select those seats --------*/
+  /*-------- onClickingChangeSeats function enables all selectedManager and available seats and we will be able to select those seats --------*/
   const onClickingChangeSeats = () => {
     setIsSeatsChanging(true);
     setSelectedSeats([...selectedSeats, ...selectedManager.seats_array]);
@@ -209,34 +261,40 @@ const Hoe = () => {
     setLastName('');
     setFirstNameError("");
     setLastNameError("");
+    setSeatCount(0);
+    setSelectedSeatCount(0);
   }
 
   const onClickingAddManager = async () => {
     if (firstName !== "" && lastName !== "") {
       if (selectedSeats.length === 0) {
-        alert("Please select atleast one seat")
+        alert("Please select at least one seat")
       }
       else {
         try {
           const response = await axios.post(`${baseurl}/addNewManager`, {
             firstName: firstName,
-            lastName: lastName, businessUnit: HOE.name, country: HOE.country, state: HOE.state,
-            city: HOE.city, campus: HOE.campus, floor: HOE.floor, seats_array: selectedSeats, hoe_id: HOE.id
+            lastName: lastName,
+            businessUnit: HOE.name,
+            country: HOE.country,
+            state: HOE.state,
+            city: HOE.city,
+            campus: HOE.campus,
+            floor: HOE.floor,
+            seats_array: selectedSeats,
+            hoe_id: HOE.id
           });
-          const newManager =  response.data.result;
-          console.log("f", firstName, "l", lastName);
+          const newManager = response.data.result;
           setIsSeatsChanging(false);
           setIsAddingManager(false);
           setSelectedSeats([]);
-          await getManagerDetails(hoe_bu);
+          await getManagerDetails(hoeId);
           setSelectedManager({ ...newManager, name: `${newManager.first_name} ${newManager.last_name}` });
-
         } catch (err) {
-          console.error(err)
+          console.error(err);
         }
       }
     }
-
   }
 
   /*-------- countAllocatedSeats function is to get values to display in table at top --------*/
@@ -256,7 +314,7 @@ const Hoe = () => {
       }
     } else if (name === "lastname") {
       if (event.target.value.trim() === "") {
-        setLastNameError("*Required")
+        setLastNameError("*Required");
       } else {
         setLastNameError("");
       }
@@ -350,186 +408,209 @@ const Hoe = () => {
               ))}
             </Select>
           </FormControl>
-          <FormControl sx={{ minWidth: 200 }} disabled={!selectedCampus}>
-            <InputLabel id="floor-select-label">Floor</InputLabel>
-            <Select
-              labelId="floor-select-label"
-              id="floor-select"
-              value={selectedFloor}
-              label="Floor"
-              onChange={(e) => {
-                setSelectedFloor(e.target.value);
-                setHoe(HoeList.filter(item => item.campus === selectedCampus && item.floor === e.target.value)[0]);
-                setIsSeatsChanging(false);
-                setSelectedSeats([]);
-                setManagers([]);
-                setSelectedManager("");
-              }}
-            >
-              {floors.map((floor, index) => (
-                <MenuItem key={index} value={floor}>
-                  {floor}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-      </Box>
-      {HoeList.length > 0 && <TableContainer component={Paper} sx={{ marginTop: '20px', marginBottom: '40px', width: "80%" }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Category</TableCell>
-              <TableCell>Details</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <TableRow>
-              <TableCell>Seats Assigned By Admin</TableCell>
-              <TableCell>{HOE.seats.length}</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Seats Assigned To Managers</TableCell>
-              <TableCell>{String(countAllocatedSeats())}</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Seats Available</TableCell>
-              <TableCell>{String(HOE.seats.length - countAllocatedSeats())}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>}
-      <FormControl fullWidth style={{ marginBottom: '20px', width: '300px' }}>
-        <InputLabel id="manager-select-label">Select Manager</InputLabel>
-        <Select
-          labelId="manager-select-label"
-          id="manager-select"
-          value={selectedManager ? selectedManager.id : ""}
-          label="Select Manager"
-          onChange={handleManagerChange}
-        >
-          {managers.map((manager) => (
-            <MenuItem key={manager.id} value={manager.id}>{manager.name}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <Typography variant="h6" >Seats Layout</Typography>
-
-      <Box display="flex" flexDirection="row" gap={2}>
-        <Box p={1} border={1} borderRadius={4}>
-          <Typography variant="body2">Country: {HOE.country}</Typography>
-        </Box>
-        <Box p={1} border={1} borderRadius={4}>
-          <Typography variant="body2">State: {HOE.state}</Typography>
-        </Box>
-        <Box p={1} border={1} borderRadius={4}>
-          <Typography variant="body2">City: {HOE.city}</Typography>
-        </Box>
-        <Box p={1} border={1} borderRadius={4}>
-          <Typography variant="body2">Campus: {HOE.campus}</Typography>
-        </Box>
-        <Box p={1} border={1} borderRadius={4}>
-          <Typography variant="body2">Floor: {HOE.floor}</Typography>
-        </Box>
-      </Box>
-
-      <Grid container spacing={2} style={{ margin: '20px 20px', width: "90%", display: "flex", justifyContent: "center", maxHeight: "400px", overflowY: "auto" }}>
-        {HoeList.length > 0 && renderSeats()}
-      </Grid>
-
-      <Grid container spacing={5} justifyContent="center" marginBottom={5}>
-        <Grid item>
-          <Box sx={{ width: 20, height: 20, backgroundColor: '#28a745', display: 'inline-block', marginRight: '5px' }} />
-          <Typography variant="body2" display="inline">Available Seats</Typography>
-        </Grid>
-        <Grid item>
-          <Box sx={{ width: 20, height: 20, backgroundColor: '#ffc107', display: 'inline-block', marginRight: '5px' }} />
-          <Typography sx={{ height: 20 }} variant="body2" display="inline">Manager Seats</Typography>
-        </Grid>
-        <Grid item>
-          <Box sx={{ width: 20, height: 20, backgroundColor: '#007bff', display: 'inline-block', marginRight: '5px' }} />
-          <Typography sx={{ height: 20 }} variant="body2" display="inline">Selected Seats</Typography>
-        </Grid>
-        <Grid item>
-          <Box sx={{
-            width: 20, height: 20, background: '#fd7e14', display: 'inline-block', marginRight: '5px', position: 'relative',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: '50%',
-              backgroundColor: '#ffc107'
-            }
-          }} />
-          <Typography variant="body2" display="inline">Allocated Seats</Typography>
-        </Grid>
-      </Grid>
-
-      {/*<Button variant="contained" color="primary" onClick={allocateSeats}>Allocate Seats</Button> */}
-      {!isSeatsChanging && managers.length > 0 && HOE.seats.length > 0 && !isAddingManager &&
-        <Button variant="contained" color="primary" onClick={onClickingChangeSeats}>Change Seats for {selectedManager.name}</Button>}
-      {isSeatsChanging && !isAddingManager && <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
-        <TextField
-          label="Selected Seats"
-          fullWidth
-          value={selectedSeats}
-          style={{ marginBottom: '25px' }}
-          InputProps={{
-            readOnly: true,
-          }}
-        />
-        <Button variant="contained" color="primary" onClick={onClickingUpdateSeats}>Update Seats for {selectedManager.name}</Button>
-      </Paper>}
-
-      {!isSeatsChanging && !isAddingManager && HoeList.length > 0 && HOE.seats.length > 0 && (HOE.seats.length - countAllocatedSeats()) > 0 &&
-        <Button variant="contained" color="primary" onClick={onClickingAddNewManager} sx={{ marginTop: 5 }} >Add New Manager</Button>}
-
-      {isSeatsChanging && isAddingManager &&
-        <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
-          <TextField
-            label="First Name"
-            name="firstname"
-            fullWidth
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            style={{ marginBottom: '15px' }}
-            autoFocus
-            onBlur={handleBlur}
-            error={!!firstNameError}
-            helperText={firstNameError}
-            color="success"
-          />
-          <TextField
-            label="Last Name"
-            name="lastname"
-            fullWidth
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            style={{ marginBottom: '25px' }}
-            autoFocus
-            onBlur={handleBlur}
-            error={!!lastNameError}
-            helperText={lastNameError}
-            color="success"
-          />
-          <TextField
-            label="Selected Seats"
-            name='selectedseats'
-            fullWidth
-            value={selectedSeats}
-            style={{ marginBottom: '25px' }}
-            InputProps={{
-              readOnly: true,
+          <FormControl sx={{ minWidth: 200 }}
+          disabled={!selectedCampus}>
+          <InputLabel id="floor-select-label">Floor</InputLabel>
+          <Select
+            labelId="floor-select-label"
+            id="floor-select"
+            value={selectedFloor}
+            label="Floor"
+            onChange={(e) => {
+              setSelectedFloor(e.target.value);
+              setHoe(HoeList.filter(item => item.campus === selectedCampus && item.floor === e.target.value)[0]);
+              setIsSeatsChanging(false);
+              setSelectedSeats([]);
+              setManagers([]);
+              setSelectedManager("");
             }}
-            autoFocus
-          />
-          <Button variant="contained" color="primary" onClick={onClickingAddManager}>
-            Add Manager
-          </Button>
-        </Paper>
-      }
+          >
+            {floors.map((floor, index) => (
+              <MenuItem key={index} value={floor}>
+                {floor}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+    </Box>
+
+    {HoeList.length > 0 && <TableContainer component={Paper} sx={{ marginTop: '20px', marginBottom: '40px', width: "80%" }}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Category</TableCell>
+            <TableCell>Details</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          <TableRow>
+            <TableCell>Seats Assigned By Admin</TableCell>
+            <TableCell>{HOE.seats.length}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>Seats Assigned To Managers</TableCell>
+            <TableCell>{String(countAllocatedSeats())}</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell>Seats Available</TableCell>
+            <TableCell>{String(HOE.seats.length - countAllocatedSeats())}</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </TableContainer>}
+    <FormControl fullWidth style={{ marginBottom: '20px', width: '300px' }}>
+      <InputLabel id="manager-select-label">Select Manager</InputLabel>
+      <Select
+        labelId="manager-select-label"
+        id="manager-select"
+        value={selectedManager ? selectedManager.id : ""}
+        label="Select Manager"
+        onChange={handleManagerChange}
+      >
+        {managers.map((manager) => (
+          <MenuItem key={manager.id} value={manager.id}>{manager.name}</MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+    <Typography variant="h6" >Seats Layout</Typography>
+
+    <Box display="flex" flexDirection="row" gap={2}>
+      <Box p={1} border={1} borderRadius={4}>
+        <Typography variant="body2">Country: {HOE.country}</Typography>
+      </Box>
+      <Box p={1} border={1} borderRadius={4}>
+        <Typography variant="body2">State: {HOE.state}</Typography>
+      </Box>
+      <Box p={1} border={1} borderRadius={4}>
+        <Typography variant="body2">City: {HOE.city}</Typography>
+      </Box>
+      <Box p={1} border={1} borderRadius={4}>
+        <Typography variant="body2">Campus: {HOE.campus}</Typography>
+      </Box>
+      <Box p={1} border={1} borderRadius={4}>
+        <Typography variant="body2">Floor: {HOE.floor}</Typography>
+      </Box>
+    </Box>
+
+    <Grid container spacing={2} style={{ margin: '20px 20px', width: "90%", display: "flex", justifyContent: "center", maxHeight: "400px", overflowY: "auto" }}>
+      {HoeList.length > 0 && renderSeats()}
+    </Grid>
+
+    <Grid container spacing={5} justifyContent="center" marginBottom={5}>
+      <Grid item>
+        <Box sx={{ width: 20, height: 20, backgroundColor: '#28a745', display: 'inline-block', marginRight: '5px' }} />
+        <Typography variant="body2" display="inline">Available Seats</Typography>
+      </Grid>
+      <Grid item>
+        <Box sx={{ width: 20, height: 20, backgroundColor: '#ffc107', display: 'inline-block', marginRight: '5px' }} />
+        <Typography sx={{ height: 20 }} variant="body2" display="inline">Manager Seats</Typography>
+      </Grid>
+      <Grid item>
+        <Box sx={{ width: 20, height: 20, backgroundColor: '#007bff', display: 'inline-block', marginRight: '5px' }} />
+        <Typography sx={{ height: 20 }} variant="body2" display="inline">Selected Seats</Typography>
+      </Grid>
+      <Grid item>
+        <Box sx={{
+          width: 20, height: 20, background: '#fd7e14', display: 'inline-block', marginRight: '5px', position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: '50%',
+            backgroundColor: '#ffc107'
+          }
+        }} />
+        <Typography variant="body2" display="inline">Allocated Seats</Typography>
+      </Grid>
+    </Grid>
+
+    {!isSeatsChanging && managers.length > 0 && HOE.seats.length > 0 && !isAddingManager &&
+      <Button variant="contained" color="primary" onClick={onClickingChangeSeats}>Change Seats for {selectedManager.name}</Button>}
+    {isSeatsChanging && !isAddingManager && <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
+      <TextField
+        label="Selected Seats"
+        fullWidth
+        value={selectedSeats}
+        style={{ marginBottom: '25px' }}
+        InputProps={{
+          readOnly: true,
+        }}
+      />
+      <Button variant="contained" color="primary" onClick={onClickingUpdateSeats}>Update Seats for {selectedManager.name}</Button>
+    </Paper>}
+
+    {!isSeatsChanging && !isAddingManager && HoeList.length > 0 && HOE.seats.length > 0 && (HOE.seats.length - countAllocatedSeats()) > 0 &&
+      <Button variant="contained" color="primary" onClick={onClickingAddNewManager} sx={{ marginTop: 5 }} >Add New Manager</Button>}
+
+{isSeatsChanging && isAddingManager &&
+  <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
+    <TextField
+      label="First Name"
+      name="firstname"
+      fullWidth
+      value={firstName}
+      onChange={(e) => setFirstName(e.target.value)}
+      style={{ marginBottom: '15px' }}
+      autoFocus
+      onBlur={handleBlur}
+      error={!!firstNameError}
+      helperText={firstNameError}
+      color="success"
+    />
+    <TextField
+      label="Last Name"
+      name="lastname"
+      fullWidth
+      value={lastName}
+      onChange={(e) => setLastName(e.target.value)}
+      style={{ marginBottom: '25px' }}
+      autoFocus
+      onBlur={handleBlur}
+      error={!!lastNameError}
+      helperText={lastNameError}
+      color="success"
+    />
+    <TextField
+      label="Seat Count"
+      type="number"
+      name='seatcount'
+      fullWidth
+      value={seatCount}
+      onChange={(e) => setSeatCount(parseInt(e.target.value))}
+      style={{ marginBottom: '25px' }}
+      inputProps={{ min: 1, max: HOE.seats.length - countAllocatedSeats() }}
+    />
+    <TextField
+      label="Seats Selected Count"
+      name='seatsselectedcount'
+      fullWidth
+      value={selectedSeatCount}
+      style={{ marginBottom: '25px' }}
+      InputProps={{
+        readOnly: true,
+      }}
+      autoFocus
+    />
+    <TextField
+      label="Selected Seats"
+      name='selectedseats'
+      fullWidth
+      value={selectedSeats.join(', ')}
+      style={{ marginBottom: '25px' }}
+      InputProps={{
+        readOnly: true,
+      }}
+      autoFocus
+    />
+    <Button variant="contained" color="primary" onClick={onClickingAddManager}>
+      Add Manager
+    </Button>
+  </Paper>
+}
+
 
       <Snackbar
         open={openSnackbar}
@@ -541,10 +622,8 @@ const Hoe = () => {
           Data updated successfully!
         </Alert>
       </Snackbar>
-
     </div>
   );
 };
 
 export default Hoe;
-

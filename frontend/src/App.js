@@ -13,7 +13,8 @@ import ConfigureSeatAllocation from "./configureSeatAllocation";
 import SeatAllocation from "./seatAllocation";
 import SeatAllocationAdmin from "./seatAllocationAdmin";
 import BUWiseChart from "./Graph";
-import GraphsbyAdmin from "./GraphsByAdmin";
+import ConditionalExport from "./ConditionalExport";
+import AllocationPlanning from "./AllocationPlanning";
 
 function App() {
   return (
@@ -39,7 +40,8 @@ function App() {
               element={<ConfigureSeatAllocation />}
             ></Route>
              { /* <Route path="/graph" element={<BUWiseChart />} />  */ }
-             <Route path="/graph" element={<GraphsbyAdmin />} />
+             <Route path="/graph" element={<ConditionalExport />} />
+             <Route path="/plan" element={<AllocationPlanning />} />
           </Route>
         </Routes>
       </Router>

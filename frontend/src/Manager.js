@@ -242,8 +242,8 @@ const Manager = () => {
         }
     };
 
-    /*-------- handleManagerChange function is to change selectedManager --------*/
-    const handleManagerChange = (event) => {
+    /*-------- handleEmployeeChange function is to change selectedManager --------*/
+    const handleEmployeeChange = (event) => {
         // console.log("event", event.target.value);
         // console.log(managers);
         const filteredList = employees.filter(manager => manager.id === event.target.value);
@@ -251,6 +251,11 @@ const Manager = () => {
         setSeatData(filteredList[0].seat_data);
         setIsSeatsChanging(false);
         setSelectedSeats("WFH");
+        setIsAddingEmployee(false);
+        setNewFirstName("");
+        setNewLastName("");
+        setNewFirstNameError("");
+        setNewLastNameError("");
         if (selectedDay !== "all" && filteredList[0].seat_data[selectedDay] === 'WFH') setOpenWFHSnackbar(true);
     };
 
@@ -403,7 +408,7 @@ const Manager = () => {
                     id="manager-select"
                     value={selectedEmployee ? selectedEmployee.id : ""}
                     label="Select Employee"
-                    onChange={handleManagerChange}
+                    onChange={handleEmployeeChange}
                 >
                     {employees.map((manager) => (
                         <MenuItem key={manager.id} value={manager.id}>{manager.name}</MenuItem>
