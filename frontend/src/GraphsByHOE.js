@@ -28,6 +28,7 @@ ChartJS.register(
 const GraphsbyHoe = () => {
   const [graphData, setGraphData] = useState(null);
   const [floorGraphData, setFloorGraphData] = useState(null);
+  const [hoeId, setHoeId] = useState("");
 
   const { token } = useContext(AuthContext);
   const decoded = jwtDecode(token); 
@@ -72,9 +73,19 @@ const GraphsbyHoe = () => {
   useEffect(() => {
     const fetchManagerData = async () => {
       try {
+        const decoded = jwtDecode(token); 
+        const response1 = await axios.get(`${baseurl}/getHoeIdFromTable`, {
+          params: { // Using params to send query parameters
+            bu : decoded.bu,
+          }
+        });
+
+        const response_data = response1;
+        //console.log(response_data);
+        setHoeId(response_data.data[0].id);
         const response = await axios.get(`${baseurl}/getManagerAllocationData`, {
           params: {
-            hoeId: id
+            hoeId: response_data.data[0].id
           }
         });
         //console.log(response.data);
@@ -220,8 +231,8 @@ const GraphsbyHoe = () => {
       }
     };
 
-    fetchManagerData();
-  }, [id]);
+    if(token) fetchManagerData();
+  }, [token]);
 
   return (
     <Container style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
