@@ -9,7 +9,18 @@ import { baseurl } from './utils';
 import { AuthContext } from "./AuthProvider";
 import { jwtDecode } from 'jwt-decode';
 
+const days = [
+  { id: 'Monday', value: 'Monday' },
+  { id: 'Tuesday', value: 'Tuesday' },
+  { id: 'Wednesday', value: 'Wednesday' },
+  { id: 'Thursday', value: 'Thursday' },
+  { id: 'Friday', value: 'Friday' },
+];
+
+
 const Hoe = () => {
+  const [seatData, setSeatData] = useState({"Monday" : [], "Tuesday" : [], "Wednesday" : [], "Thursday" : [], "Friday" : []})
+  const [selectedDay, setSelectedDay] = useState('Monday');
   const [HoeList, setHoeList] = useState([]);
   const [HOE, setHoe] = useState({});  // to store and update HOE
   const [locations, setLocations] = useState([]);
@@ -113,18 +124,18 @@ const Hoe = () => {
         }
       });
 
-      setManagers(response2.data.map(item => ({ ...item, name: item.first_name + " " + item.last_name })));
+      setManagers(response2.data.map(item => ({ ...item, name: item.first_name + " " + item.last_name, seats_array : item.seats_data })));
       if (response2.data.length > 0) {
         if (selectedManager === '' && !isAddingManager) {
-          setSelectedManager({ ...response2.data[0], name: response2.data[0].first_name + " " + response2.data[0].last_name });
+          setSelectedManager({ ...response2.data[0], name: response2.data[0].first_name + " " + response2.data[0].last_name, seats_array: response2.data[0].seats_data});
         } else {
           const managerDetails = (firstName !== ''   && lastName !== '') ? response2.data.filter(item => item.first_name === firstName && item.last_name === lastName) : response2.data.filter(item => item.id === selectedManager.id);
           setFirstName("");
           setLastName("");
           if (managerDetails.length === 0) {
-            setSelectedManager({ ...response2.data[0], name: response2.data[0].first_name + " " + response2.data[0].last_name });
+            setSelectedManager({ ...response2.data[0], name: response2.data[0].first_name + " " + response2.data[0].last_name, seats_array: response2.data[0].seats_data });
           } else {
-            setSelectedManager({ ...managerDetails[0], name: managerDetails[0].first_name + " " + managerDetails[0].last_name });
+            setSelectedManager({ ...managerDetails[0], name: managerDetails[0].first_name + " " + managerDetails[0].last_name, seats_array: managerDetails[0].seats_data });
           }
         }
       } else {
@@ -154,63 +165,79 @@ const Hoe = () => {
     setLastName("");
   };
 
+  const onClickingDay = (day) => {
+    if (isSeatsChanging && !isAddingManager) {
+      setSelectedManager({
+        ...selectedManager,
+        seats_array: { ...selectedManager.seats_array, [selectedDay]: selectedSeats },
+        seats_data: { ...selectedManager.seats_data, [selectedDay]: selectedSeats }
+      });
+      setSelectedSeats(selectedManager.seats_array[day] || []);
+    } else if (isAddingManager) {
+      setSeatData({ ...seatData, [selectedDay]: selectedSeats });
+      setSelectedSeats(seatData[day] || []); // Ensure the selected seats for the new day are displayed
+      seatData[day].length > 0 ? setSeatCount(seatData[day].length) : setSeatCount(0);
+      seatData[day].length > 0 ? setSelectedSeatCount(seatData[day].length) : setSelectedSeatCount(0);
+    }
+    setSelectedDay(day);
+  };
+  
   /*-------- handleSeatClick function is to update selectedSeats upon selecting/deselecting a seat --------*/
   const handleSeatClick = (seat) => {
-  if (isAddingManager) {
-    // Check if seatCount is set before allowing seat selection
-    if (seatCount <= 0) {
-      alert('Please provide a seat count before selecting seats.');
-      return;
-    }
-
-    // Check if the seat is already selected
-    if (selectedSeats.includes(seat)) {
-      // If it's a deselect action, simply remove the seat and decrease the selected seat count
-      setSelectedSeats(selectedSeats.filter(s => s !== seat));
-      setSelectedSeatCount(selectedSeatCount - 1);
-    } else {
-      // If it's a select action
-      if (selectedSeatCount >= seatCount) {
-        alert(`You have already selected the required number of seats: ${seatCount}`);
+    const updatedSeatData = { ...seatData };
+  
+    if (isAddingManager) {
+      if (seatCount <= 0) {
+        alert('Please provide a seat count before selecting seats.');
         return;
       }
-      let count = seatCount - selectedSeatCount;
-      let newSelectedSeats = [];
-
-      // Check the contiguous available seats starting from the clicked seat
-      for (let i = seat; i < seat + count; i++) {
-        // Stop selection if an allocated seat is encountered
-        if (!HOE.seats.includes(i) || selectedSeats.includes(i) || managers.some(manager => manager.seats_array.includes(i))) break;
-        newSelectedSeats.push(i);
-      }
-
-      // Only add new seats that are contiguous and available
-      setSelectedSeats([...selectedSeats, ...newSelectedSeats]);
-      setSelectedSeatCount(selectedSeatCount + newSelectedSeats.length);
-    }
-  } else {
-    // Normal add seat operation
-    if (!selectedSeats.includes(seat)) {
-      setSelectedSeats([...selectedSeats, seat]);
-      setSelectedSeatCount(selectedSeatCount + 1);
-    } else {
-      setSelectedSeats(selectedSeats.filter(s => s !== seat));
-      setSelectedSeatCount(selectedSeatCount - 1);
-    }
-  }
-};
-
   
+      if (selectedSeats.includes(seat)) {
+        updatedSeatData[selectedDay] = updatedSeatData[selectedDay].filter(s => s !== seat);
+        setSelectedSeatCount(selectedSeatCount - 1);
+      } else {
+        if (selectedSeatCount >= seatCount) {
+          alert(`You have already selected the required number of seats: ${seatCount}`);
+          return;
+        }
+        let count = seatCount - selectedSeatCount;
+        let newSelectedSeats = [];
+  
+        for (let i = seat; i < seat + count; i++) {
+          if (!HOE.seats.includes(i) || updatedSeatData[selectedDay].includes(i) || managers.some(manager => manager.seats_array[selectedDay].includes(i))) break;
+          newSelectedSeats.push(i);
+        }
+  
+        updatedSeatData[selectedDay] = [...updatedSeatData[selectedDay], ...newSelectedSeats];
+        setSelectedSeatCount(selectedSeatCount + newSelectedSeats.length);
+      }
+      setSeatData(updatedSeatData);
+    setSelectedSeats(updatedSeatData[selectedDay]); // Ensure the selected seats for the current day are displayed
+    } else {
+      if (!selectedSeats.includes(seat)) {
+        setSelectedSeats([...selectedSeats, seat]);
+        // updatedSeatData[selectedDay] = [...updatedSeatData[selectedDay], seat];
+        // setSelectedSeatCount(selectedSeatCount + 1);
+      } else {
+        setSelectedSeats(selectedSeats.filter(s => s !== seat));
+        // updatedSeatData[selectedDay] = updatedSeatData[selectedDay].filter(s => s !== seat);
+        // setSelectedSeatCount(selectedSeatCount - 1);
+      }
+    }
+  
+    // setSeatData(updatedSeatData);
+    // setSelectedSeats(updatedSeatData[selectedDay]); // Ensure the selected seats for the current day are displayed
+  };
   
   
 
   /*-------- onClickingUpdateSeats function is to update respective selectedManager seats in database --------*/
   const onClickingUpdateSeats = async () => {
     selectedSeats.sort((a, b) => a - b);
-    if (selectedManager && selectedSeats.length > 0) {
+    if (selectedManager) {
       try {
         await axios.put(`${baseurl}/updateManagerData/${selectedManager.id}`, {
-          seats: selectedSeats
+          seats: {...selectedManager.seats_array, [selectedDay] : selectedSeats}
         });
         setSelectedSeats([]);
         setIsSeatsChanging(false);
@@ -240,6 +267,9 @@ const Hoe = () => {
           number={i}
           isSelected={selectedSeats.includes(i)}
           onClick={() => handleSeatClick(i)}
+          selectedDay={selectedDay}
+          selectedSeats = {selectedSeats}
+          seatData = {seatData}
         />
       );
     }
@@ -249,7 +279,7 @@ const Hoe = () => {
   /*-------- onClickingChangeSeats function enables all selectedManager and available seats and we will be able to select those seats --------*/
   const onClickingChangeSeats = () => {
     setIsSeatsChanging(true);
-    setSelectedSeats([...selectedSeats, ...selectedManager.seats_array]);
+    setSelectedSeats([...selectedSeats, ...selectedManager.seats_array[selectedDay]]);
   }
 
   const onClickingAddNewManager = () => {
@@ -281,15 +311,16 @@ const Hoe = () => {
             city: HOE.city,
             campus: HOE.campus,
             floor: HOE.floor,
-            seats_array: selectedSeats,
+            seats_array: seatData,
             hoe_id: HOE.id
           });
           const newManager = response.data.result;
           setIsSeatsChanging(false);
           setIsAddingManager(false);
           setSelectedSeats([]);
+          setSeatData({"Monday" : [], "Tuesday" : [], "Wednesday" : [], "Thursday" : [], "Friday" : []});
           await getManagerDetails(hoeId);
-          setSelectedManager({ ...newManager, name: `${newManager.first_name} ${newManager.last_name}` });
+          setSelectedManager({ ...newManager, name: `${newManager.first_name} ${newManager.last_name}`, seats_array: newManager.seats_data });
         } catch (err) {
           console.error(err);
         }
@@ -299,8 +330,8 @@ const Hoe = () => {
 
   /*-------- countAllocatedSeats function is to get values to display in table at top --------*/
   const countAllocatedSeats = () => {
-    const seats = managers.flatMap(manager => manager.seats_array);
-    const filteredSeats = isSeatsChanging && !isAddingManager ? seats.filter(item => !selectedManager.seats_array.includes(item)) : seats;
+    const seats = managers.flatMap(manager => manager.seats_array[selectedDay]);
+    const filteredSeats = isSeatsChanging && !isAddingManager ? seats.filter(item => !selectedManager.seats_array[selectedDay].includes(item)) : seats;
     return filteredSeats.length;
   }
 
@@ -449,16 +480,17 @@ const Hoe = () => {
             <TableCell>{HOE.seats.length}</TableCell>
           </TableRow>
           <TableRow>
-            <TableCell>Seats Assigned To Managers</TableCell>
+            <TableCell>Seats Assigned To Managers on {selectedDay}</TableCell>
             <TableCell>{String(countAllocatedSeats())}</TableCell>
           </TableRow>
           <TableRow>
-            <TableCell>Seats Available</TableCell>
+            <TableCell>Seats Available on {selectedDay}</TableCell>
             <TableCell>{String(HOE.seats.length - countAllocatedSeats())}</TableCell>
           </TableRow>
         </TableBody>
       </Table>
     </TableContainer>}
+
     <FormControl fullWidth style={{ marginBottom: '20px', width: '300px' }}>
       <InputLabel id="manager-select-label">Select Manager</InputLabel>
       <Select
@@ -473,6 +505,15 @@ const Hoe = () => {
         ))}
       </Select>
     </FormControl>
+    <Box display="flex" flexDirection="row" justifyContent='center' flexWrap='wrap' alignItems="center" gap={2} mb={2}>
+  {days.map((day) => (
+    <Button key={day.id} variant="contained" onClick={() => onClickingDay(day.value)} sx={{ backgroundColor: selectedDay === day.value ? "primary" : "grey" }}>
+      {day.id}
+    </Button>
+  ))}
+</Box>
+
+{/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */}
     <Typography variant="h6" >Seats Layout</Typography>
 
     <Box display="flex" flexDirection="row" gap={2}>
@@ -598,7 +639,7 @@ const Hoe = () => {
       label="Selected Seats"
       name='selectedseats'
       fullWidth
-      value={selectedSeats.join(', ')}
+      value={seatData[selectedDay].join(', ')}
       style={{ marginBottom: '25px' }}
       InputProps={{
         readOnly: true,

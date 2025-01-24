@@ -4,7 +4,7 @@ import { baseurl } from "./utils";
 import axios from 'axios';
 import { Container, Typography } from '@mui/material';
 import { AuthContext } from "./AuthProvider";
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -30,13 +30,7 @@ const GraphsbyManager = () => {
   const [floorGraphData, setFloorGraphData] = useState(null);
 
   const { token } = useContext(AuthContext);
-  const decoded = jwtDecode(token); 
-  //console.log("ddd", decoded);
-
-  const id = decoded.bu === 'cloud' ? 1 :
-             decoded.bu === 'service' ? 2 :
-             decoded.bu === 'sales' ? 3 :
-             decoded.bu === 'Group Infrastructure Services' ? 4 : 5;
+  const decoded = jwtDecode(token);
 
   // Colors for allocated and occupied seats
   const allocatedColor = 'rgba(75, 192, 192, 0.6)';
@@ -68,23 +62,39 @@ const GraphsbyManager = () => {
             managerId: managerId
           }
         });
-        //console.log(response.data);
-
-        // Graph: Day-wise allocated and occupied seats
-        const dayGroupedData = response.data.reduce((acc, item) => {
-          const key = item.day;
-          if (!acc[key]) {
-            acc[key] = { allocated: 0, occupied: 0 };
-          }
-          acc[key].allocated = item.manager_seats.length;
-          acc[key].occupied += item.occupied_seats.filter(seat => seat !== null).length;
+    
+        console.log('API Response:', response.data);
+    
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    
+        // Initialize dayGroupedData with zero counts
+        const dayGroupedData = days.reduce((acc, day) => {
+          acc[day] = { allocated: 0, occupied: 0 };
           return acc;
         }, {});
-
+    
+        response.data.forEach(item => {
+          days.forEach(day => {
+            if (item.manager_seats && item.manager_seats[day]) {
+              // Directly assign the length of allocated seats for the day
+              dayGroupedData[day].allocated = item.manager_seats[day].length;
+            }
+    
+            if (item.occupied_seats && day === item.day) {
+              // Directly assign the length of occupied seats for the day
+              dayGroupedData[day].occupied = item.occupied_seats.filter(seat => seat !== null).length;
+            }
+          });
+        });
+    
         const dayLabels = Object.keys(dayGroupedData);
         const allocatedSeats = dayLabels.map(label => dayGroupedData[label].allocated);
         const occupiedSeats = dayLabels.map(label => dayGroupedData[label].occupied);
-
+    
+        console.log('Day Grouped Data:', dayGroupedData);
+        console.log('Allocated Seats:', allocatedSeats);
+        console.log('Occupied Seats:', occupiedSeats);
+    
         setFloorGraphData({
           labels: dayLabels,
           datasets: [
@@ -134,11 +144,12 @@ const GraphsbyManager = () => {
             }
           }
         });
-
+    
       } catch (error) {
         console.error('Error fetching manager data for graph:', error);
       }
-    };
+    };                                
+                    
 
     fetchManagerId();
     managerId !== '' && fetchManagerData();

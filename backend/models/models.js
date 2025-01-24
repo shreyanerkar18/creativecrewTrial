@@ -403,7 +403,8 @@ const getHOEFromTable = async (id) => {
 };
 
 const getManagersByHOEIdFromTable = async (id, country, state, city, campus, floor) => {
-  const sql = 'SELECT * FROM manager_allocation WHERE hoe_id = $1 AND country = $2 AND state = $3 AND city = $4 AND campus = $5 AND floor = $6 ORDER BY seats_array[1]';
+  // const sql = 'SELECT * FROM manager_allocation WHERE hoe_id = $1 AND country = $2 AND state = $3 AND city = $4 AND campus = $5 AND floor = $6 ORDER BY seats_array[1]';
+  const sql = 'SELECT * FROM manager_allocation WHERE hoe_id = $1 AND country = $2 AND state = $3 AND city = $4 AND campus = $5 AND floor = $6';
   const values = [id, country, state, city, campus, floor];
 
   try {
@@ -417,7 +418,7 @@ const getManagersByHOEIdFromTable = async (id, country, state, city, campus, flo
 };
 
 const updateManagerData = async (id, seats) => {
-  const sql = 'UPDATE manager_allocation SET seats_array = $1 WHERE id = $2';
+  const sql = 'UPDATE manager_allocation SET seats_data = $1 WHERE id = $2';
   const values = [seats, id];
 
   try {
@@ -430,7 +431,7 @@ const updateManagerData = async (id, seats) => {
 };
 
 const addNewManager = async (firstName, lastName, businessUnit, country, state, city, campus, floor, seats_array, hoe_id) => {
-  const sql = `INSERT INTO manager_allocation (first_name, last_name, business_unit, country, state, city, campus, floor, seats_array, hoe_id)
+  const sql = `INSERT INTO manager_allocation (first_name, last_name, business_unit, country, state, city, campus, floor, seats_data, hoe_id)
                 VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
   const values = [firstName, lastName, businessUnit, country, state, city, campus, floor, seats_array, hoe_id];
 
@@ -458,7 +459,7 @@ const getManagerIdFromTable = async (bu, firstName, lastName) => {
 };
 
 const getManagerFromTable = async (id) => {
-  const sql = `SELECT t1.first_name, t1.last_name, t1.business_unit, t1.campus, t1.floor, t1.seats_array, t1.hoe_id,
+  const sql = `SELECT t1.first_name, t1.last_name, t1.business_unit, t1.campus, t1.floor, t1.seats_data, t1.hoe_id,
                t2.country, t2.state, t2.city, t2.total
                FROM  manager_allocation  AS t1
                INNER JOIN seat_allocation as t2
@@ -810,7 +811,7 @@ WITH manager_seats AS (
         city,
         campus,
         floor,
-        seats_array,
+        seats_data::jsonb AS seats_data,
         hoe_id
     FROM 
         manager_allocation
@@ -827,7 +828,7 @@ WITH manager_seats AS (
         city,
         campus,
         floor,
-        NULL AS seats_array,
+        '{}'::jsonb AS seats_data,
         $1 AS hoe_id
     FROM
         seat_allocation
@@ -853,7 +854,7 @@ SELECT
     ms.city,
     ms.campus,
     ms.floor,
-    COALESCE(ms.seats_array, '{}') AS seats_array,
+    COALESCE(ms.seats_data, '{}'::jsonb) AS seats_data,
     ms.hoe_id,
     COALESCE(array_agg(DISTINCT sa.seat), '{}') AS allocated_seats
 FROM 
@@ -879,7 +880,6 @@ ON
     AND ms.hoe_id = sa.bu_id
 WHERE 
     ms.hoe_id = $1
-    AND sa.bu_id = $1
 GROUP BY 
     ms.id,
     ms.first_name,
@@ -890,7 +890,7 @@ GROUP BY
     ms.city,
     ms.campus,
     ms.floor,
-    ms.seats_array,
+    ms.seats_data,
     ms.hoe_id
 ORDER BY
     ms.country ASC,
@@ -898,9 +898,6 @@ ORDER BY
     ms.city ASC,
     ms.campus ASC,
     ms.floor ASC;
-
-
-
     `;
     const values = [hoeId]
     const result = await pool.query(sql, values);
@@ -991,7 +988,7 @@ const getGraphDetailsForManager = async (managerId) => {
 WITH seat_data AS (
     SELECT
         manager_id,
-        jsonb_each_text(seat_data) AS seat_info
+        jsonb_each_text(seat_data::jsonb) AS seat_info
     FROM
         employee_allocation
     WHERE
@@ -1021,7 +1018,7 @@ manager_info AS (
         ma.city,
         ma.campus,
         ma.floor,
-        ma.seats_array,
+        ma.seats_data::jsonb,
         ma.hoe_id
     FROM
         manager_allocation ma
@@ -1039,30 +1036,11 @@ SELECT
     mi.city,
     mi.campus,
     mi.floor,
-    COALESCE(mi.seats_array, '{}') AS manager_seats,
+    COALESCE(mi.seats_data, '{}') AS manager_seats,
     COALESCE(array_agg(DISTINCT spd.seat), '{}') AS occupied_seats
 FROM
     manager_info mi
 CROSS JOIN all_days ad
-LEFT JOIN (
-    SELECT
-        country,
-        state,
-        city,
-        campus,
-        floor,
-        bu_id,
-        unnest(seats) AS seat
-    FROM
-        seat_allocation
-) sa
-ON
-    mi.country = sa.country
-    AND mi.state = sa.state
-    AND mi.city = sa.city
-    AND mi.campus = sa.campus
-    AND mi.floor = sa.floor
-    AND mi.hoe_id = sa.bu_id
 LEFT JOIN seats_per_day spd
 ON
     mi.id = spd.manager_id
@@ -1078,7 +1056,7 @@ GROUP BY
     mi.city,
     mi.campus,
     mi.floor,
-    mi.seats_array,
+    mi.seats_data,
     mi.hoe_id
 ORDER BY
     CASE ad.day
@@ -1095,10 +1073,12 @@ ORDER BY
     mi.campus ASC,
     mi.floor ASC;
     `;
-    const values = [managerId]
+    const values = [managerId];
+    console.log(`Executing query: ${sql} with values: ${values}`);
     const result = await pool.query(sql, values);
     return result.rows;
   } catch (error) {
+    console.error('Error executing query:', error);
     throw error;
   }
 };

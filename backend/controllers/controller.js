@@ -561,9 +561,11 @@ exports.getManagerIdForGraph = async (req, res) => {
 
 exports.getGraphDetailsForManager = async (req, res) => {
   const {managerId} = req.query;
+  console.log("controllerrrrr", managerId);
 
   try {
     const data = await models.getGraphDetailsForManager(managerId);
+    console.log("data", data);
     res.json(data);
   } catch (error) {
     console.error('Error fetching manager allocation data:', error);

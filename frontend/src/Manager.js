@@ -17,8 +17,7 @@ const Manager = () => {
         { id: 'Tuesday', value: 'Tuesday' },
         { id: 'Wednesday', value: 'Wednesday' },
         { id: 'Thursday', value: 'Thursday' },
-        { id: 'Friday', value: 'Friday' },
-        { id: 'All Days', value: 'all' }
+        { id: 'Friday', value: 'Friday' }
     ];
 
 
@@ -74,6 +73,7 @@ const Manager = () => {
             setIsAddingEmployee(false); // Reset adding state
             setIsSeatsChanging(false);
             setNewSeats({"Monday" : "WFH", "Tuesday" : "WFH", "Wednesday" : "WFH", "Thursday" : "WFH", "Friday" : "WFH"});
+            setOpenWFHSnackbar(false);
       
             // Optionally, set the newly added employee as the selected employee
             setSelectedEmployee({ ...newEmployee, name: `${newEmployee.first_name} ${newEmployee.last_name}`,  seats_array: [...new Set(Object.values(newEmployee.seat_data))] });
@@ -125,7 +125,7 @@ const Manager = () => {
     const [selectedEmployee, setSelectedEmployee] = useState('');  //to store and update selected manager in drop-down
     const [selectedSeats, setSelectedSeats] = useState("WFH");   //to store seats while selecting
     const [isSeatsChanging, setIsSeatsChanging] = useState(false); //we cannot select seats when isSeatsChanging is false
-    const [selectedDay, setSelectedDay] = useState(days[5].value);
+    const [selectedDay, setSelectedDay] = useState(days[0].value);
     const [seatData, setSeatData] = useState({});
 
     const { token } = useContext(AuthContext);
@@ -190,8 +190,8 @@ const Manager = () => {
             const response1 = await axios.get(`${baseurl}/getManagerFromTable/${id}`);
             const response2 = await axios.get(`${baseurl}/getEmployeesByManagerIdFromTable/${id}`);
             // console.log(response1.data);
-            // console.log('Manager data:', response1.data[0]);
-            //console.log("Employees", response2.data);
+            console.log('Manager data:', response1.data[0]);
+            console.log("Employees", response2.data);
 
             setManager(response1.data[0]);
             //console.log("manager details", response1.data[0]);
@@ -315,7 +315,7 @@ const Manager = () => {
                     floor={manager.floor}
                     newSeats={newSeats}
                     isAddingEmployee = {isAddingEmployee}
-                    totalManagerSeats={manager.seats_array}
+                    totalManagerSeats={manager.seats_data[selectedDay].length > 0 ? manager.seats_data[selectedDay] : []}
                     employeeDetails={selectedEmployee}
                     employeesList={employees}
                     isSeatsChanging={isSeatsChanging}
@@ -323,6 +323,7 @@ const Manager = () => {
                     number={i}
                     isSelected={selectedSeats === i}
                     onClick={() => handleSeatClick(i)}
+                    selectedDay={selectedDay}
                 />
             );
         }//}
@@ -385,7 +386,7 @@ const Manager = () => {
                     <TableBody>
                         <TableRow>
                             <TableCell>Seats Assigned By HOE</TableCell>
-                            <TableCell>{manager.seats_array.length}</TableCell>
+                            <TableCell>{manager.seats_data[selectedDay].length > 0 ? manager.seats_data[selectedDay].length : 0}</TableCell>
                         </TableRow>
                     </TableBody>
                     <TableBody>
@@ -397,7 +398,7 @@ const Manager = () => {
                     <TableBody>
                         <TableRow>
                             <TableCell>Seats Available  {selectedDay === "all" ? `For The Week` : `on ${selectedDay}`}</TableCell>
-                            <TableCell>{manager.seats_array.length - employeesAllocatedOnSelectedDay()}</TableCell>
+                            <TableCell>{manager.seats_data[selectedDay].length - employeesAllocatedOnSelectedDay()}</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>

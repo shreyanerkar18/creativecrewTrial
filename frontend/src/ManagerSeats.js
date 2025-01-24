@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@mui/material';
 
-const Seat = ({ number, isSelected, onClick, employeeDetails, employeesList, isSeatsChanging, totalManagerSeats, newSeats, isAddingEmployee, floor, day, seatData }) => {
+const Seat = ({ number, isSelected, onClick, employeeDetails, employeesList, isSeatsChanging, totalManagerSeats, newSeats, isAddingEmployee, floor, day, seatData, selectedDay }) => {
 
     let { seats_array } = employeeDetails;
     if (isAddingEmployee) {
