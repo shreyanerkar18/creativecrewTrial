@@ -55,4 +55,7 @@ router.get('/getSeatingCapacityData', controller.getSeatingCapacityData);
 router.get('/getManagerIdForGraph', controller.getManagerIdForGraph);
 router.get('/getGraphDetailsForManager', controller.getGraphDetailsForManager);
 
+//Profile
+router.post('/changePassword', controller.changePassword);
+
 module.exports = router;

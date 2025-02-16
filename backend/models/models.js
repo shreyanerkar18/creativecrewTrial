@@ -1083,6 +1083,18 @@ ORDER BY
   }
 };
 
+// Function to update user password using a callback
+const updateUserPassword = (email, newPassword, callback) => {
+  const sql = 'UPDATE users SET password = $1 WHERE email = $2';
+  const values = [newPassword, email];
+  pool.query(sql, values, (err, result) => {
+    if (err) {
+      return callback(err, null);
+    }
+    return callback(null, result);
+  });
+};
+
 module.exports = {
   insertUser,
   findUserByEmail,
@@ -1119,5 +1131,6 @@ module.exports = {
   getSeatAllocationData,
   getSeatingCapacityData,
   getManagerIdForGraph,
-  getGraphDetailsForManager
+  getGraphDetailsForManager,
+  updateUserPassword
 };

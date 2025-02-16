@@ -572,3 +572,52 @@ exports.getGraphDetailsForManager = async (req, res) => {
     res.status(500).json({ message: 'Error fetching data' });
   }
 };
+
+exports.changePassword = (req, res) => {
+  const { email, oldPassword, newPassword } = req.body;
+
+  // Find user by email using callback
+  models.findUserByEmail(email, (err, user) => {
+    if (err) {
+      console.error('Error fetching user data:', err.message);
+      return res.status(500).json({ error: 'Error fetching user data' });
+    }
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // Compare entered old password with the stored hashed password
+    bcrypt.compare(oldPassword, user.password, async (err, isPasswordValid) => {
+      if (err) {
+        console.error('Error comparing passwords:', err.message);
+        return res.status(500).json({ error: 'Error comparing passwords' });
+      }
+
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Invalid old password' });
+      }
+
+      // Hash the new password
+      bcrypt.hash(newPassword, 10, (err, hashedNewPassword) => {
+        if (err) {
+          console.error('Error hashing new password:', err.message);
+          return res.status(500).json({ error: 'Error hashing new password' });
+        }
+
+        // Update user's password using callback
+        models.updateUserPassword(email, hashedNewPassword, (err, result) => {
+          if (err) {
+            console.error('Error updating user password:', err.message);
+            return res.status(500).json({ error: 'Error updating user password' });
+          }
+
+          // Respond with success message
+          res.status(200).json({
+            message: 'Password changed successfully',
+          });
+        });
+      });
+    });
+  });
+};

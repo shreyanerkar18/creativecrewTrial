@@ -15,6 +15,7 @@ import SeatAllocationAdmin from "./seatAllocationAdmin";
 import BUWiseChart from "./Graph";
 import ConditionalExport from "./ConditionalExport";
 import AllocationPlanning from "./AllocationPlanning";
+import Profile from "./Profile";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
          
           <Route element={<ProtectedRoute />}>
+            <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/hoe" element={<Hoe />} />
             <Route path="/manager" element={<Manager />} />
