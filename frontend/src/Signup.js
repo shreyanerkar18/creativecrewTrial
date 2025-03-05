@@ -41,7 +41,7 @@ export default function Signup() {
   };
 
   const validatePassword = (password) => {
-    return password.length >= 6;
+    return password.length >= 8;
   };
 
   const handleBlur = (event) => {
@@ -50,14 +50,14 @@ export default function Signup() {
     if (name === "email" && !validateEmail(value)) {
       error = "Invalid email address";
     } else if (name === "password" && !validatePassword(value)) {
-      error = "Password must be at least 6 characters";
+      error = "Password must be at least 8 characters";
     }
     setErrors((prevErrors) => ({ ...prevErrors, [name]: error }));
   };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((prevFormData) => ({ ...prevFormData, [name]: value.trim() }));
+    setFormData((prevFormData) => ({ ...prevFormData, [name]: name === 'email' || name ==='password' ? value.trim() : value }));
   };
 
   const handleSubmit = async (event) => {
@@ -66,8 +66,8 @@ export default function Signup() {
     const { firstName, lastName, email, password, role, bu, transport } =
       formData;
     const dataToSubmit = {
-      firstName,
-      lastName,
+      firstName : firstName.trim(),
+      lastName : lastName.trim(),
       email,
       password,
       role,

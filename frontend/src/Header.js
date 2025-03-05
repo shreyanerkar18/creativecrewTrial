@@ -5,6 +5,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import IconButton from '@mui/material/IconButton';
 import PersonIcon from '@mui/icons-material/Person';
+import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "./AuthProvider";
 import { jwtDecode } from 'jwt-decode';
@@ -27,6 +28,22 @@ export default function Header() {
       console.error("Invalid token specified:", error); // Handle token error (e.g., log out the user) 
     }
   }
+
+  const handleHome = () => {
+      if (location.pathname !== "/seatAllocationAdmin" && decoded.role === 'admin'){
+        console.log(decoded);
+        return navigate("/seatAllocationAdmin");
+      }
+      if (location.pathname !== "/hoe" && decoded.role === 'hoe'){
+        return navigate("/hoe");
+      }
+      if (location.pathname !== "/manager" && decoded.role === 'manager'){
+        return navigate("/manager");
+      }
+      if (location.pathname !== "/employee" && decoded.role === 'employee'){
+        return navigate("/employee");
+      }
+  };
 
   const handleLogout = () => {
     logout();
@@ -55,6 +72,11 @@ export default function Header() {
     <Box sx={{ flexGrow: 1 }}>
       <AppBar color="success" position="static">
         <Toolbar>
+          {!hideHeaderOptions && token &&
+            <IconButton color="inherit" onClick={handleHome}>
+              <HomeRoundedIcon />
+            </IconButton>
+          }
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Creative Crew
           </Typography>

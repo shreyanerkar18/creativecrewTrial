@@ -1,38 +1,52 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { Container, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, List, ListItem } from "@mui/material";
-import axios from 'axios';
+import React, { useContext, useEffect, useState } from "react";
+import {
+  Container,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  List,
+  ListItem,
+  Box,
+  useMediaQuery,
+} from "@mui/material";
+import axios from "axios";
 import { baseurl } from "./utils";
 import { AuthContext } from "./AuthProvider";
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode } from "jwt-decode";
 
 export default function Employee() {
   const [seatData, setSeatData] = useState([]);
-  const {token} = useContext(AuthContext);
+  const { token } = useContext(AuthContext);
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const decoded = jwtDecode(token);
-
-  // Function to get the current day in a format matching the keys in seat_data
-  const getCurrentDay = () => {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
-    //console.log(days[today-1]);
-    return days[today - 1] || 'Monday'; // Default to Monday if day not found
-  };
 
   useEffect(() => {
     const fetchSeatData = async () => {
       try {
         if (token) {
           const decoded = jwtDecode(token);
-        const response = await axios.get(`${baseurl}/getSeatData`, {
-          params: { firstName : decoded.firstName, 
-                    lastName : decoded.lastName,
-                    bu : decoded.bu }
-        });
-        console.log('Fetched seat data:', response.data);
-        const data = response.data.map(item => { item.seat_data = [item.seat_data]; return item; });
-        setSeatData(data);
-      }} catch (error) {
-        console.error("Error fetching seat data:", error.response ? error.response.data : error.message);
+          const response = await axios.get(`${baseurl}/getSeatData`, {
+            params: {
+              firstName: decoded.firstName,
+              lastName: decoded.lastName,
+              bu: decoded.bu,
+            },
+          });
+          console.log("Fetched seat data:", response.data);
+          setSeatData(
+            response.data.map((item) => ({ ...item, seat_data: [item.seat_data] }))
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Error fetching seat data:",
+          error.response ? error.response.data : error.message
+        );
       }
     };
 
@@ -41,66 +55,95 @@ export default function Employee() {
     }
   }, [token]);
 
-  const currentDay = getCurrentDay();
-
   return (
-    <Container style={{ marginTop: '20px' }}>
+    <Container sx={{ mt: 4, px: isMobile ? 2 : 4 }}>
       <Typography
-        variant="h4"
-        sx={{ 
-          marginBottom: '20px', 
-          color: '#388e3c', // Custom green color
-          fontFamily: 'Roboto'
+        variant={isMobile ? "h5" : "h4"}
+        sx={{
+          mb: 3,
+          color: "#2c3e50",
+          fontWeight: "bold",
+          textAlign: "center",
         }}
       >
         Welcome, {decoded.firstName} {decoded.lastName}!
       </Typography>
-      <TableContainer component={Paper} elevation={3} style={{ marginTop: '20px' }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center" sx={{ backgroundColor: '#66bb6a', color: 'white' }}>Manager Name</TableCell>
-              <TableCell align="center" sx={{ backgroundColor: '#66bb6a', color: 'white' }}>Floor</TableCell>
-              <TableCell align="center" sx={{ backgroundColor: '#66bb6a', color: 'white' }}>Business Unit</TableCell>
-              <TableCell align="center" sx={{ backgroundColor: '#66bb6a', color: 'white' }}>Campus</TableCell>
-              <TableCell align="center" sx={{ backgroundColor: '#66bb6a', color: 'white' }}>Seat Number</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {seatData.length > 0 ? (
-              seatData.map((seat, index) => (
-                <TableRow key={index} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#e8f5e9' } }}>
-                  <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.first_name} {seat.last_name} </TableCell>
-                  <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.floor}</TableCell>
-                  <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.business_unit}</TableCell>
-                  <TableCell align="center" sx={{ color: '#2e7d32' }}>{seat.campus}</TableCell>
-                  <TableCell align="center" sx={{ color: '#2e7d32' }}>
-                    {Array.isArray(seat.seat_data) && seat.seat_data.length > 0 ? (
-                      seat.seat_data.map((data, dataIndex) => (
-                        <List key={dataIndex} sx={{ padding: 0, display: 'inline' }}>
-                          {data[currentDay] ? (
-                            <ListItem sx={{ padding: '2px 0', fontSize: '0.875rem', display: 'inline', margin: '0' }}>
-                              {data[currentDay]}
+
+      <Box sx={{ overflowX: "auto" }}>
+        <TableContainer component={Paper} elevation={5} sx={{ borderRadius: "12px" }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "#2980b9" }}>
+                {[
+                  "Manager Name",
+                  "Floor",
+                  "Business Unit",
+                  "Campus",
+                  "Seat Allocation",
+                ].map((header) => (
+                  <TableCell
+                    key={header}
+                    align="center"
+                    sx={{ color: "white", fontWeight: "bold", py: 1 }}
+                  >
+                    {header}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {seatData.length > 0 ? (
+                seatData.map((seat, index) => (
+                  <TableRow key={index} sx={{ "&:nth-of-type(odd)": { backgroundColor: "#ecf0f1" } }}>
+                    <TableCell align="center" sx={{ fontWeight: "500", color: "#34495e" }}>
+                      {seat.first_name} {seat.last_name}
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: "500", color: "#34495e" }}>{seat.floor}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: "500", color: "#34495e" }}>{seat.business_unit}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: "500", color: "#34495e" }}>{seat.campus}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: "500", color: "#34495e" }}>
+                      {Array.isArray(seat.seat_data) && seat.seat_data.length > 0 ? (
+                        <List sx={{
+                          p: 1,
+                          backgroundColor: "#dff9fb",
+                          borderRadius: "8px",
+                          display: "inline-block",
+                          textAlign: "left",
+                        }}>
+                          {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => (
+                            <ListItem
+                              key={day}
+                              sx={{
+                                p: "4px",
+                                fontSize: "0.9rem",
+                                fontWeight: "bold",
+                                color: seat.seat_data[0][day] === "WFH" ? "#e74c3c" : "#27ae60",
+                                backgroundColor: seat.seat_data[0][day] === "WFH" ? "#fdecea" : "#eafaf1",
+                                borderRadius: "6px",
+                                mb: "4px",
+                              }}
+                            >
+                              {day}: {seat.seat_data[0][day] || "No data"}
                             </ListItem>
-                          ) : (
-                            <Typography variant="body2">No data for today</Typography>
-                          )}
+                          ))}
                         </List>
-                      ))
-                    ) : (
-                      <Typography variant="body2">No data available</Typography>
-                    )}
+                      ) : (
+                        <Typography variant="body2" sx={{ color: "#e74c3c", fontWeight: "bold" }}>No data available</Typography>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ color: "#e74c3c", fontWeight: "bold" }}>
+                    No data available
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ color: '#d32f2f' }}>No data available</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
     </Container>
   );
 }

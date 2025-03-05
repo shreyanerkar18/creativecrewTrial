@@ -6,6 +6,11 @@ import Grid from "@mui/material/Grid";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +41,7 @@ const colorCodes = [
 ];
 const SeatAllocationAdmin = () => {
   const [seats, setSeats] = useState();
+  const [oldSeats, setOldSeats] = useState(seats);
   const [values, setValues] = React.useState(initialBuState);
   const [allocationData, setData] = React.useState([]);
   const [allocateSeatSecFlag, setAllocateSeatSecFlag] = useState(false);
@@ -52,7 +58,59 @@ const SeatAllocationAdmin = () => {
   const [layoutView, setLayoutView] = useState(initialBuState);
   const [capacityData, setCapacityData] = useState([]);
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [openSnackbar1, setOpenSnackbar1] = useState(false);
+  const [showAllocateButton, setShowAllocateButton] = useState(true);
+  const [showUnallocateButton, setShowUnallocateButton] = useState(true);
+  const [workDoing, setWorkDoing] = useState(null);
+  const [open, setOpen] = useState(false);
+
   const navigate = useNavigate();
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+
+  const onClickingAllocateSeats = () => {
+    setWorkDoing(workDoing === null ? 'allocation' : null);
+    setSeats(oldSeats);
+    values.bu = "";
+    values.maxSeats = 0;
+
+  }
+
+  const onClickingUnallocateSeats = () => {
+    setWorkDoing(workDoing === null ? 'unallocation' : null);
+    values.bu = "";
+    values.maxSeats = 0;
+
+  }
+
+  const handleUnallocation = async () => {
+    try {
+      const response = await axios.put(`${baseurl}/removeSeatsForHOE`, {
+        country: values.country,
+        state: values.state,
+        city: values.city,
+        campus: values.campus,
+        floor: values.floor,
+        businessId: values.bu
+      }
+      )
+      console.log(response.data);
+      setOpen(false);
+      setWorkDoing(null);
+      setOpenSnackbar1(true);
+      getAllocationData();
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  }
+
   React.useEffect(() => {
     getBu();
     getAllocationData();
@@ -75,6 +133,9 @@ const SeatAllocationAdmin = () => {
   }, [maxSeats, allocatedSeatsByGlobal]);
   const handleSnackbarClose = () => {
     setOpenSnackbar(false);
+  };
+  const handleSnackbarClose1 = () => {
+    setOpenSnackbar1(false);
   };
   const handleCountries = (data) => {
     let countryList = [];
@@ -100,6 +161,7 @@ const SeatAllocationAdmin = () => {
             //getRandomColor();
           });
           setBus(res.data);
+          console.log(res.data);
         }
       })
       .catch((err) => {
@@ -124,15 +186,15 @@ const SeatAllocationAdmin = () => {
           setTimeout(() => {
             setValues({ ...values, country: res.data[0].country, state: res.data[0].state, city: res.data[0].city, campus: res.data[0].campus, floor: res.data[0].floor })
             setLayoutView({ ...layoutView, country: res.data[0].country, state: res.data[0].state, city: res.data[0].city, campus: res.data[0].campus, floor: res.data[0].floor })
-            setStates(Array.from(new Set(res.data.filter(item => item.country === res.data[0].country).map(item => item.state))).sort() .map(state => ({ name: state })))
-            setCities(Array.from(new Set(res.data.filter(item => item.state === res.data[0].state).map(item => item.city))).sort() .map(city => ({ name: city })))
-            setCampuses(Array.from(new Set(res.data.filter(item => item.city === res.data[0].city).map(item => item.campus))).sort() .map(campus => ({ name: campus })))
+            setStates(Array.from(new Set(res.data.filter(item => item.country === res.data[0].country).map(item => item.state))).sort().map(state => ({ name: state })))
+            setCities(Array.from(new Set(res.data.filter(item => item.state === res.data[0].state).map(item => item.city))).sort().map(city => ({ name: city })))
+            setCampuses(Array.from(new Set(res.data.filter(item => item.city === res.data[0].city).map(item => item.campus))).sort().map(campus => ({ name: campus })))
             setFloors(Array.from(new Set(res.data.filter(item => item.campus === res.data[0].campus).map(item => item.floor)))
-                      .sort((a, b) => { 
-                        if (typeof a === 'number' && typeof b === 'number') { return a - b; } 
-                        else { return a.toString().localeCompare(b.toString()); }
-                      })
-                      .map(floor => ({ name: floor })))
+              .sort((a, b) => {
+                if (typeof a === 'number' && typeof b === 'number') { return a - b; }
+                else { return a.toString().localeCompare(b.toString()); }
+              })
+              .map(floor => ({ name: floor })))
           }, 1000)
           handleCountries(res.data);
           handleStates(res.data, res.data[0].country);
@@ -264,8 +326,9 @@ const SeatAllocationAdmin = () => {
       }
       objs.push(sobj);
     }
-    //console.log(objs);
+    console.log("OOOOBBBBBBBJJJJJJJJJJ", objs);
     setSeats(objs);
+    setOldSeats(objs);
   };
   const getConfiguredDataByFilter = async (floor) => {
     let queryParams = { ...values, floor };
@@ -297,6 +360,7 @@ const SeatAllocationAdmin = () => {
         bu: 0,
         maxSeats: 0,
       });
+      setWorkDoing(null);
     } else if (event.target.name == "state") {
       handleCities(capacityData, event.target.value);
       setValues({
@@ -308,6 +372,7 @@ const SeatAllocationAdmin = () => {
         bu: 0,
         maxSeats: 0,
       });
+      setWorkDoing(null);
     } else if (event.target.name == "city") {
       handleCampus(capacityData, event.target.value);
       setValues({
@@ -318,6 +383,7 @@ const SeatAllocationAdmin = () => {
         bu: 0,
         maxSeats: 0,
       });
+      setWorkDoing(null);
     } else if (event.target.name == "campus") {
       handleFloor(capacityData, event.target.value);
       setValues({
@@ -327,6 +393,7 @@ const SeatAllocationAdmin = () => {
         bu: 0,
         maxSeats: 0,
       });
+      setWorkDoing(null);
     } else if (event.target.name == "floor") {
       // setMaxSeats(0);
       getConfiguredDataByFilter(event.target.value);
@@ -340,6 +407,7 @@ const SeatAllocationAdmin = () => {
         bu: 0,
         maxSeats: 0,
       });
+      setWorkDoing(null);
     } else if (event.target.name == "bu") {
       // copyValues()
       setValues({
@@ -565,6 +633,8 @@ const SeatAllocationAdmin = () => {
             if (res.data) {
               setAllocateSeatSecFlag(false);
               setOpenSnackbar(true);
+              setOldSeats(seats);
+              setWorkDoing(null);
             }
           })
           .catch((err) => {
@@ -574,11 +644,12 @@ const SeatAllocationAdmin = () => {
 
       else {
         await axios
-          .post(`${baseurl}/createAllocatedSetsAdmin`, {...obj, total:maxSeats})
+          .post(`${baseurl}/createAllocatedSetsAdmin`, { ...obj, total: maxSeats })
           .then((res) => {
             if (res.data) {
               setAllocateSeatSecFlag(false);
               setOpenSnackbar(true);
+              setWorkDoing(null);
             }
           })
           .catch((err) => {
@@ -609,7 +680,7 @@ const SeatAllocationAdmin = () => {
       }
     }
   }
-  
+
   return (
     <div className="seatAllocationContainer">
       <Snackbar
@@ -746,7 +817,7 @@ const SeatAllocationAdmin = () => {
                   </Select>
                 </FormControl>
               </Box>
-              <Box sx={{ minWidth: 120 }}>
+              {/*<Box sx={{ minWidth: 120 }}>
                 <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
                   <InputLabel id="demo-simple-select-label">
                     Business Unit
@@ -766,42 +837,189 @@ const SeatAllocationAdmin = () => {
                 </FormControl>
               </Box>
               <Box sx={{ minWidth: 120 }}>
-                <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
-                  {/* <InputLabel id="demo-simple-select-label">No of seats</InputLabel> */}
-                  <TextField
+                <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium"> */}
+              {/* <InputLabel id="demo-simple-select-label">No of seats</InputLabel> */}
+              {/*<TextField
                     id="outlined-number"
                     label="Allocation seats"
                     type="number"
                     name="maxSeats"
                     value={values.maxSeats}
                     onChange={handleChange}
-                  />
-                  {/* <Input id="outlined-basic" variant="outlined"   name='maxSeats' value={values.maxSeats} onChange={handleChange} type="number"/> */}
-                  {errors.maxSeats ? <div className="fontFamily" style={{ color: "red", paddingTop: "5px", fontSize: "12px" }}>{errors.maxSeats}</div> : ""}
+                  /> */}
+              {/* <Input id="outlined-basic" variant="outlined"   name='maxSeats' value={values.maxSeats} onChange={handleChange} type="number"/> */}
+              {/*{errors.maxSeats ? <div className="fontFamily" style={{ color: "red", paddingTop: "5px", fontSize: "12px" }}>{errors.maxSeats}</div> : ""}
                 </FormControl>
-              </Box>
-              <Box sx={{ marginTop: "10px" }}>
+              </Box>*/}
+              {/*<Box sx={{ marginTop: "10px" }}>
                 <Grid container justifyContent={"end"}>
-                  {values.maxSeats > 0 && (
                     <Button
                       sx={{ mr: 2 }}
                       className="primaryBtnColors"
                       onClick={handleSelectSeats}
                     >
                       Select Seats
-                    </Button>
-                  )}
-                  {/* <Button   sx={{ mr: 2 }} className="secondaryBtnColors" onClick={clearAllocation}>
+                    </Button> */}
+              {/* <Button   sx={{ mr: 2 }} className="secondaryBtnColors" onClick={clearAllocation}>
                   Clear
                 </Button>
                 <Button   sx={{ mr: 2 }}  className="primaryBtnColors" onClick={handleSubmitAllocation}>
                   Assign to HOE
                 </Button> */}
-                </Grid>
-              </Box>
+              {/*</Grid>
+              </Box> */}
+              {workDoing === null && <Box sx={{ minWidth: 120 }}>
+                <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                  <Button
+                    className="primaryBtnColors"
+                    onClick={onClickingAllocateSeats}
+                  >
+                    Allocate Seats
+                  </Button>
+                </FormControl>
+              </Box>}
+
+              {workDoing === 'allocation' &&
+                <>
+                  <Box sx={{ minWidth: 120 }}>
+                    <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                      <InputLabel id="demo-simple-select-label">
+                        Business Unit
+                      </InputLabel>
+                      <Select
+                        labelId="demo-simple-select-label"
+                        id="demo-simple-select"
+                        value={values.bu}
+                        label="Business Unit"
+                        name="bu"
+                        onChange={handleChange}
+                      >
+                        {bus.map((bu, i) => (
+                          <MenuItem value={bu.id}>{bu.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                  <Box sx={{ minWidth: 120 }}>
+                    <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                      {/* <InputLabel id="demo-simple-select-label">No of seats</InputLabel> */}
+                      <TextField
+                        id="outlined-number"
+                        label="Allocation seats"
+                        type="number"
+                        name="maxSeats"
+                        value={values.maxSeats}
+                        onChange={handleChange}
+                      />
+                      {errors.maxSeats ? <div className="fontFamily" style={{ color: "red", paddingTop: "5px", fontSize: "12px" }}>{errors.maxSeats}</div> : ""}
+                    </FormControl>
+                  </Box>
+                  <Box sx={{ marginTop: "10px", display: "flex", flexDirection: 'row' }}>
+                    <Grid container justifyContent={"start"}>
+                      <Button
+                        sx={{ ml: 2 }}
+                        className="primaryBtnColors"
+                        onClick={onClickingAllocateSeats}
+                      >
+                        Cancel
+                      </Button>
+                    </Grid>
+                    <Grid container justifyContent={"end"}>
+                      {values.maxSeats > 0 && (
+                        <Button
+                          sx={{ mr: 2 }}
+                          className="primaryBtnColors"
+                          onClick={handleSelectSeats}
+                        >
+                          Select Seats
+                        </Button>
+                      )}
+                    </Grid>
+                  </Box>
+                </>
+              }
+
+              {workDoing === null && <Box sx={{ minWidth: 120 }}>
+                <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                  <Button
+                    className="primaryBtnColors"
+                    onClick={onClickingUnallocateSeats}
+                  >
+                    Unallocate Seats
+                  </Button>
+                </FormControl>
+              </Box>}
+
+              {workDoing === 'unallocation' &&
+                <>
+                  <Box sx={{ minWidth: 120 }}>
+                    <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                      <InputLabel id="demo-simple-select-label">
+                        Business Unit
+                      </InputLabel>
+                      <Select
+                        labelId="demo-simple-select-label"
+                        id="demo-simple-select"
+                        value={values.bu}
+                        label="Business Unit"
+                        name="bu"
+                        onChange={handleChange}
+                      >
+                        {bus.map((bu, i) => {
+                          const uniqueBus = [...new Set(seats.map(item => item.bu))];
+                          if (uniqueBus.includes(bu.id)) {
+                            return <MenuItem key={i} value={bu.id}>{bu.name}</MenuItem>;
+                          }
+                          return null;
+                        })}
+
+                      </Select>
+                    </FormControl>
+                  </Box>
+                  <Box sx={{ marginTop: "10px", display: "flex", flexDirection: 'row' }}>
+                    <Grid container justifyContent={"start"}>
+                      <Button
+                        sx={{ ml: 2 }}
+                        className="primaryBtnColors"
+                        onClick={onClickingAllocateSeats}
+                      >
+                        Cancel
+                      </Button>
+                    </Grid>
+                    <Grid container justifyContent={"end"}>
+                      {values.bu !== "" && (
+                        <>
+                          <Button
+                            sx={{ mr: 2 }}
+                            className="primaryBtnColors"
+                            onClick={handleClickOpen}
+                          >
+                            Unassign
+                          </Button>
+                          <Dialog open={open}>
+                            <DialogTitle style={{ color: 'red' }}>Caution!</DialogTitle>
+                            <DialogContent>
+                              <DialogContentText>
+                                This will remove all seats currently reserved for {bus.find(item => item.id === values.bu).name} on this floor. Would you like to proceed?"
+                              </DialogContentText>
+                            </DialogContent>
+                            <DialogActions>
+                              <Button onClick={handleClose} color="primary" >
+                                Cancel
+                              </Button>
+                              <Button onClick={handleUnallocation} color="warning">
+                                Proceed
+                              </Button>
+                            </DialogActions>
+                          </Dialog>
+                        </>
+                      )}
+                    </Grid>
+                  </Box>
+                </>
+              }
             </Grid>
           </Grid>
-          {/* ) : ( */}
           <Grid item md={9}>
             <Box className="seatAllocationClass">
               <h2 className="fontFamily" style={{ textTransform: "capitalize" }}>Layout view {layoutView.country && layoutView.state && layoutView.city && layoutView.campus && layoutView.floor && <>( {layoutView.country} &gt; {layoutView.state} &gt; {layoutView.city} &gt; {layoutView.campus} &gt; {layoutView.floor} )</>}</h2>
@@ -858,6 +1076,16 @@ const SeatAllocationAdmin = () => {
 
         </Grid>
       </Grid>
+      <Snackbar
+        open={openSnackbar1}
+        autoHideDuration={2000}
+        onClose={handleSnackbarClose1}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose1} severity="success" sx={{ width: '100%' }}>
+          Seats Removed Successfully!
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

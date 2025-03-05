@@ -502,6 +502,18 @@ exports.updateToSameRow = async (req, res) => {
   }
 };
 
+exports.removeSeatsForHOE = async (req, res) => {
+  const { country, state, city, campus, floor, businessId } = req.body;
+
+  try {
+    const result = await models.removeSeatsForHOE(country, state, city, campus, floor, businessId);
+    res.status(200).json({ message: 'Seats Removed Successfully', result });
+  } catch (err) {
+    console.error('Error removing seats for HOE:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 //Graphs
 exports.getManagerAllocationData = async (req, res) => {
   const {hoeId} = req.query;

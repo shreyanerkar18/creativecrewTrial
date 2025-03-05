@@ -796,6 +796,19 @@ const updateToSameRow = async (country, state, city, campus, floor, bu, seats) =
   }
 };
 
+const removeSeatsForHOE = async (country, state, city, campus, floor, businessId) => {
+  const sql = `UPDATE seat_allocation SET seats = '{}' WHERE country=$1 AND state=$2 AND city=$3 AND campus=$4 AND floor=$5 AND bu_id=$6`;
+  const values = [country, state, city, campus, floor, businessId];
+
+  try {
+    const result = await pool.query(sql, values);
+    return result;
+  } catch (err) {
+    console.error('Error executing query', err);
+    throw err;
+  }
+};
+
 //Graphs
 const getManagerAllocationData = async (hoeId) => {
   try {
@@ -1127,6 +1140,7 @@ module.exports = {
   getFloorConfiguration,
   getDetailsBeforeAllocation,
   updateToSameRow,
+  removeSeatsForHOE,
   getManagerAllocationData,
   getSeatAllocationData,
   getSeatingCapacityData,

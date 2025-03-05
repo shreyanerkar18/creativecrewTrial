@@ -19,6 +19,7 @@ router.get('/getSeatingCapacityAdminByFilter', controller.getSeatingCapacityAdmi
 router.get('/getFloorConfiguration', controller.getFloorConfiguration);
 router.get('/getDetailsBeforeAllocation', controller.getDetailsBeforeAllocation);
 router.put('/updateToSameRow', controller.updateToSameRow);
+router.put('/removeSeatsForHOE', controller.removeSeatsForHOE);
 
 //HOE page routes
 router.get('/getHoeIdFromTable', controller.getHoeIdFromTable);
