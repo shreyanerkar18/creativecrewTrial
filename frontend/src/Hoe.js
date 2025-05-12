@@ -19,7 +19,7 @@ const days = [
 
 
 const Hoe = () => {
-  const [seatData, setSeatData] = useState({"Monday" : [], "Tuesday" : [], "Wednesday" : [], "Thursday" : [], "Friday" : []})
+  const [seatData, setSeatData] = useState({ "Monday": [], "Tuesday": [], "Wednesday": [], "Thursday": [], "Friday": [] })
   const [selectedDay, setSelectedDay] = useState('Monday');
   const [HoeList, setHoeList] = useState([]);
   const [HOE, setHoe] = useState({});  // to store and update HOE
@@ -42,6 +42,8 @@ const Hoe = () => {
   const [selectedCampus, setSelectedCampus] = useState('');
   const [selectedFloor, setSelectedFloor] = useState('');
   const [hoeId, setHoeId] = useState('');
+  const [teams, setTeams] = useState([])
+  const [selectedTeam, setSelectedTeam] = useState('default');
 
   const { token } = useContext(AuthContext);
   // const decoded = jwtDecode(token);
@@ -70,12 +72,11 @@ const Hoe = () => {
           // Use decoded details in the query body
           const response1 = await axios.get(`${baseurl}/getHoeIdFromTable`, {
             params: { // Using params to send query parameters
-              bu : decoded.bu,
+              bu: decoded.bu,
             }
           });
 
           const response_data = response1;
-          //console.log(response_data);
           setHoeId(response_data.data[0].id);
         } catch (err) {
           console.error('Error fetching data:', err);
@@ -95,7 +96,7 @@ const Hoe = () => {
   const getHOEDetails = async (id) => {
     try {
       const response1 = await axios.get(`${baseurl}/getHOEFromTable/${id}`);
-
+  
       await Promise.all([
         setHoeList(response1.data),
         setHoe(response1.data[0]),
@@ -123,30 +124,78 @@ const Hoe = () => {
           city: selectedCity
         }
       });
+      const response3 = await axios.get(`${baseurl}/getTeams`, {
+        params: { bu: HOE.name }
+      })
 
-      setManagers(response2.data.map(item => ({ ...item, name: item.first_name + " " + item.last_name, seats_array : item.seats_data })));
+      await setTeams(response3.data.data);
+
+      // const groupedData = response2.data.length > 0 ? response2.data.reduce((acc, item) => {
+      //   const key = `${item.first_name}+ " " + ${item.last_name}`; // Unique key for grouping
+
+      //   if (!acc[key]) {
+      //     acc[key] = {
+      //       first_name: item.first_name,
+      //       last_name: item.last_name,
+      //       teams: [{ team: item.team_id, seats_data: item.seats_data, id:item.id }]
+      //     };
+      //   } else {
+      //     acc[key].teams.push({ team: item.team, number: item.number });
+      //   }
+
+      //   return acc;
+      // }, {}) : {};
+
+      const groupedData = await response2.data.length > 0 ? Object.values(response2.data.reduce((acc, item) => {
+        const key = `${item.first_name}-${item.last_name}`; // Unique key for grouping
+
+        if (!acc[key]) {
+          acc[key] = { ...item, teams: [], id: '' };
+          delete acc[key].seats_data;
+          delete acc[key].team_id;
+        }
+        acc[key].teams.push({ teamId: item.team_id, seats_data: item.seats_data, seats_array: item.seats_data, id: item.id });
+        acc[key].id = JSON.stringify(acc[key].teams.map(team => ({ id: team.id, teamId: team.teamId })));
+        return acc;
+      }, {})) : [];
+
+      await setManagers(groupedData.map(item => ({ ...item, name: item.first_name + " " + item.last_name })));
       if (response2.data.length > 0) {
-        if (selectedManager === '' && !isAddingManager) {
-          setSelectedManager({ ...response2.data[0], name: response2.data[0].first_name + " " + response2.data[0].last_name, seats_array: response2.data[0].seats_data});
+        if (selectedManager !== '' && selectedTeam !== '' && selectedTeam !== 'default') {
+          const result = groupedData.filter(item => item.id === selectedManager.id);
+          setSelectedManager({ ...result[0], name: result[0].first_name + " " + result[0].last_name });
+        }
+        else if (selectedManager === '' && !isAddingManager) {
+          await setSelectedManager({ ...groupedData[0], name: groupedData[0].first_name + " " + groupedData[0].last_name });
         } else {
-          const managerDetails = (firstName !== ''   && lastName !== '') ? response2.data.filter(item => item.first_name === firstName && item.last_name === lastName) : response2.data.filter(item => item.id === selectedManager.id);
+          const managerDetails = (firstName !== '' && lastName !== '') ? groupedData.filter(item => item.first_name === firstName && item.last_name === lastName) : groupedData.filter(item => JSON.stringify(item.teams) === JSON.stringify(selectedManager.teams));
           setFirstName("");
           setLastName("");
           if (managerDetails.length === 0) {
-            setSelectedManager({ ...response2.data[0], name: response2.data[0].first_name + " " + response2.data[0].last_name, seats_array: response2.data[0].seats_data });
+            await setSelectedManager({ ...groupedData[0], name: groupedData[0].first_name + " " + groupedData[0].last_name });
           } else {
-            setSelectedManager({ ...managerDetails[0], name: managerDetails[0].first_name + " " + managerDetails[0].last_name, seats_array: managerDetails[0].seats_data });
+            await setSelectedManager({ ...managerDetails[0], name: managerDetails[0].first_name + " " + managerDetails[0].last_name });
           }
         }
       } else {
-        setManagers([]);
-        setSelectedManager('');
+        await setManagers([]);
+        await setSelectedManager('');
       }
-
     } catch (err) {
       console.error('Error fetching data:', err);
     }
   }, [selectedFloor, selectedCampus, selectedManager]);
+
+  useEffect(() => {
+    if (selectedTeam === 'default' || selectedTeam === '') {
+      const filteredList = managers.filter(item => item.first_name + ' ' + item.last_name === selectedManager.name)
+
+      if (isSeatsChanging) return;
+      else if (filteredList.length > 0) setSelectedTeam(filteredList[0].teams.find(item => teams.find(row => row.id === item.teamId).team === 'Default').teamId);
+      else if (managers.length === 0) setSelectedTeam('');
+      else setSelectedTeam('default')
+    }
+  }, [selectedManager]);
 
   useEffect(() => {
     if (selectedFloor !== "" && hoeId !== "") {
@@ -158,8 +207,19 @@ const Hoe = () => {
   const handleManagerChange = (event) => {
     const filteredList = managers.filter(manager => manager.id === event.target.value);
     setSelectedManager(filteredList[0]);
+    setSelectedTeam(filteredList[0].teams.find(item => teams.find(row => row.id === item.teamId).team === 'Default').teamId);
     setIsSeatsChanging(false);
     setSelectedSeats([]);
+    setIsAddingManager(false);
+    setFirstName("");
+    setLastName("");
+  };
+
+  const handleTeamChange = (event) => {
+    setSelectedTeam(event.target.value);
+    setIsSeatsChanging(false);
+    setSelectedSeats([]);
+
     setIsAddingManager(false);
     setFirstName("");
     setLastName("");
@@ -169,10 +229,14 @@ const Hoe = () => {
     if (isSeatsChanging && !isAddingManager) {
       setSelectedManager({
         ...selectedManager,
-        seats_array: { ...selectedManager.seats_array, [selectedDay]: selectedSeats },
-        seats_data: { ...selectedManager.seats_data, [selectedDay]: selectedSeats }
+        teams: selectedManager.teams.map(item => item.teamId === selectedTeam ?
+          {
+            ...item,
+            seats_array: { ...item.seats_array, [selectedDay]: selectedSeats },
+            seats_data: { ...item.seats_data, [selectedDay]: selectedSeats }
+          } : item)
       });
-      setSelectedSeats(selectedManager.seats_array[day] || []);
+      setSelectedSeats(selectedManager.teams.find(item => item.teamId === selectedTeam).seats_array[day] || []);
     } else if (isAddingManager) {
       setSeatData({ ...seatData, [selectedDay]: selectedSeats });
       setSelectedSeats(seatData[day] || []); // Ensure the selected seats for the new day are displayed
@@ -181,17 +245,17 @@ const Hoe = () => {
     }
     setSelectedDay(day);
   };
-  
+
   /*-------- handleSeatClick function is to update selectedSeats upon selecting/deselecting a seat --------*/
   const handleSeatClick = (seat) => {
     const updatedSeatData = { ...seatData };
-  
+
     if (isAddingManager) {
       if (seatCount <= 0) {
         alert('Please provide a seat count before selecting seats.');
         return;
       }
-  
+
       if (selectedSeats.includes(seat)) {
         updatedSeatData[selectedDay] = updatedSeatData[selectedDay].filter(s => s !== seat);
         setSelectedSeatCount(selectedSeatCount - 1);
@@ -202,17 +266,17 @@ const Hoe = () => {
         }
         let count = seatCount - selectedSeatCount;
         let newSelectedSeats = [];
-  
+
         for (let i = seat; i < seat + count; i++) {
-          if (!HOE.seats.includes(i) || updatedSeatData[selectedDay].includes(i) || managers.some(manager => manager.seats_array[selectedDay].includes(i))) break;
+          if (!HOE.seats.includes(i) || updatedSeatData[selectedDay].includes(i) || managers.some(manager => manager.teams.some(item => item.seats_array[selectedDay].includes(i)))) break;
           newSelectedSeats.push(i);
         }
-  
+
         updatedSeatData[selectedDay] = [...updatedSeatData[selectedDay], ...newSelectedSeats];
         setSelectedSeatCount(selectedSeatCount + newSelectedSeats.length);
       }
       setSeatData(updatedSeatData);
-    setSelectedSeats(updatedSeatData[selectedDay]); // Ensure the selected seats for the current day are displayed
+      setSelectedSeats(updatedSeatData[selectedDay]); // Ensure the selected seats for the current day are displayed
     } else {
       if (!selectedSeats.includes(seat)) {
         setSelectedSeats([...selectedSeats, seat]);
@@ -224,25 +288,31 @@ const Hoe = () => {
         // setSelectedSeatCount(selectedSeatCount - 1);
       }
     }
-  
+
     // setSeatData(updatedSeatData);
     // setSelectedSeats(updatedSeatData[selectedDay]); // Ensure the selected seats for the current day are displayed
   };
-  
-  
+
+
 
   /*-------- onClickingUpdateSeats function is to update respective selectedManager seats in database --------*/
   const onClickingUpdateSeats = async () => {
+    const team = selectedTeam;
     selectedSeats.sort((a, b) => a - b);
     if (selectedManager) {
       try {
-        await axios.put(`${baseurl}/updateManagerData/${selectedManager.id}`, {
-          seats: {...selectedManager.seats_array, [selectedDay] : selectedSeats}
+        const response = await axios.put(`${baseurl}/updateManagerData/${selectedManager.teams.find(item => item.teamId === selectedTeam).id}`, {
+          seats: { ...selectedManager.teams.find(item => item.teamId === selectedTeam).seats_array, [selectedDay]: selectedSeats }
         });
+        const updatedManager = { ...selectedManager, teams: selectedManager.teams.map(item => item.teamId === selectedTeam ? { ...item, seats_array: response.data.result.rows[0].seats_data, seats_data: response.data.result.rows[0].seats_data } : item) };
+        const updatedManagersList = managers.map(item => item.id === selectedManager.id ? updatedManager : item);
         setSelectedSeats([]);
         setIsSeatsChanging(false);
-        getManagerDetails(hoeId); // Refresh data  // Also change id in line 41 && 110
+        setManagers(updatedManagersList);
+        setSelectedManager(updatedManager);
+        //getManagerDetails(hoeId); // Refresh data  // Also change id in line 41 && 110
         setOpenSnackbar(true); // Show Snackbar
+        setSelectedTeam(team);
       } catch (err) {
         console.error(err);
       }
@@ -251,9 +321,16 @@ const Hoe = () => {
     }
   };
 
+  const onClickingCancel = () => {
+    setIsSeatsChanging(false);
+    setSelectedSeats([]);
+    setSelectedManager(managers.find(item => item.name === selectedManager.name && item.business_unit == selectedManager.business_unit))
+  }
+
   /*-------- renderSeats function is to get Seats from Seat component in Seat.js file --------*/
   const renderSeats = () => {
     let seats = [];
+    // const managerDetails = {...selectedManager, id: teams.find(item =>  item.teamId === selectedTeam).id, seats_array: teams.find(item =>  item.teamId === selectedTeam).id}
     for (let i = 1; i <= HOE.total; i++) {
       seats.push(
         <Seat
@@ -268,8 +345,9 @@ const Hoe = () => {
           isSelected={selectedSeats.includes(i)}
           onClick={() => handleSeatClick(i)}
           selectedDay={selectedDay}
-          selectedSeats = {selectedSeats}
-          seatData = {seatData}
+          selectedSeats={selectedSeats}
+          seatData={seatData}
+          selectedTeam={selectedTeam}
         />
       );
     }
@@ -279,7 +357,7 @@ const Hoe = () => {
   /*-------- onClickingChangeSeats function enables all selectedManager and available seats and we will be able to select those seats --------*/
   const onClickingChangeSeats = () => {
     setIsSeatsChanging(true);
-    setSelectedSeats([...selectedSeats, ...selectedManager.seats_array[selectedDay]]);
+    setSelectedSeats([...selectedSeats, ...selectedManager.teams.find(team => team.teamId === selectedTeam).seats_array[selectedDay]]);
   }
 
   const onClickingAddNewManager = () => {
@@ -287,6 +365,20 @@ const Hoe = () => {
     setSelectedSeats([]);
     setIsSeatsChanging(true);
     setSelectedManager('');
+    setFirstName('');
+    setLastName('');
+    setFirstNameError("");
+    setLastNameError("");
+    setSeatCount(0);
+    setSelectedSeatCount(0);
+  }
+
+  const onClickingCancelAddManager = () => {
+    setIsAddingManager(false);
+    setSelectedSeats([]);
+    setIsSeatsChanging(false);
+    setSelectedManager(managers[0]);
+    setSelectedTeam(managers[0].teams.find(item => teams.find(row => row.id === item.teamId).team === 'Default').teamId);
     setFirstName('');
     setLastName('');
     setFirstNameError("");
@@ -312,15 +404,16 @@ const Hoe = () => {
             campus: HOE.campus,
             floor: HOE.floor,
             seats_array: seatData,
-            hoe_id: HOE.id
+            hoe_id: HOE.id,
+            team: 'Default'
           });
           const newManager = response.data.result;
           setIsSeatsChanging(false);
           setIsAddingManager(false);
           setSelectedSeats([]);
-          setSeatData({"Monday" : [], "Tuesday" : [], "Wednesday" : [], "Thursday" : [], "Friday" : []});
+          setSeatData({ "Monday": [], "Tuesday": [], "Wednesday": [], "Thursday": [], "Friday": [] });
           await getManagerDetails(hoeId);
-          setSelectedManager({ ...newManager, name: `${newManager.first_name} ${newManager.last_name}`, seats_array: newManager.seats_data });
+          //setSelectedManager({ ...newManager, name: `${newManager.first_name} ${newManager.last_name}`, seats_array: newManager.seats_data });
         } catch (err) {
           console.error(err);
         }
@@ -330,9 +423,14 @@ const Hoe = () => {
 
   /*-------- countAllocatedSeats function is to get values to display in table at top --------*/
   const countAllocatedSeats = () => {
-    const seats = managers.flatMap(manager => manager.seats_array[selectedDay]);
-    const filteredSeats = isSeatsChanging && !isAddingManager ? seats.filter(item => !selectedManager.seats_array[selectedDay].includes(item)) : seats;
+    const seats = managers.flatMap(manager => manager.teams.flatMap(team => team.seats_array[selectedDay]));
+    const filteredSeats = isSeatsChanging && !isAddingManager ? seats.filter(item => !selectedManager.teams.flatMap(team => team.seats_array[selectedDay]).includes(item)) : seats;
     return filteredSeats.length;
+  }
+
+  const countAllocatedTeamSeats = () => {
+    const seats = managers.filter(manager => manager.id === selectedManager.id)[0].teams.filter(team => team.teamId === selectedTeam)[0].seats_array[selectedDay];
+    return seats.length;
   }
 
   const handleBlur = (event) => {
@@ -440,217 +538,254 @@ const Hoe = () => {
             </Select>
           </FormControl>
           <FormControl sx={{ minWidth: 200 }}
-          disabled={!selectedCampus}>
-          <InputLabel id="floor-select-label">Floor</InputLabel>
+            disabled={!selectedCampus}>
+            <InputLabel id="floor-select-label">Floor</InputLabel>
+            <Select
+              labelId="floor-select-label"
+              id="floor-select"
+              value={selectedFloor}
+              label="Floor"
+              onChange={(e) => {
+                setSelectedFloor(e.target.value);
+                setHoe(HoeList.filter(item => item.campus === selectedCampus && item.floor === e.target.value)[0]);
+                setIsSeatsChanging(false);
+                setSelectedSeats([]);
+                setManagers([]);
+                setSelectedManager("");
+                setSelectedTeam('default');
+                // getManagerDetails(hoeId);
+              }}
+            >
+              {floors.map((floor, index) => (
+                <MenuItem key={index} value={floor}>
+                  {floor}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Box>
+
+      {HoeList.length > 0 && <TableContainer component={Paper} sx={{ marginTop: '20px', marginBottom: '40px', width: "80%" }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Category</TableCell>
+              <TableCell>Details</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <TableRow>
+              <TableCell>Seats Assigned By Admin</TableCell>
+              <TableCell>{HOE.seats.length}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Seats Assigned To Managers on {selectedDay}</TableCell>
+              <TableCell>{String(countAllocatedSeats())}</TableCell>
+            </TableRow>
+            {teams.length > 0 && selectedTeam !== 'default' && selectedTeam !== '' && !isAddingManager && <TableRow>
+              <TableCell>Seats Assigned To {teams.filter(item => item.id === selectedTeam)[0].team} on {selectedDay}</TableCell>
+              <TableCell>{String(countAllocatedTeamSeats())}</TableCell>
+            </TableRow>}
+            <TableRow>
+              <TableCell>Seats Available on {selectedDay}</TableCell>
+              <TableCell>{String(HOE.seats.length - countAllocatedSeats())}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>}
+      <Box display="flex" flexDirection="row" justifyContent="center" flexWrap="wrap" gap={2} mb={2}>
+        <FormControl fullWidth style={{ marginBottom: '20px', width: '300px' }}>
+          <InputLabel id="manager-select-label">Select Manager</InputLabel>
           <Select
-            labelId="floor-select-label"
-            id="floor-select"
-            value={selectedFloor}
-            label="Floor"
-            onChange={(e) => {
-              setSelectedFloor(e.target.value);
-              setHoe(HoeList.filter(item => item.campus === selectedCampus && item.floor === e.target.value)[0]);
-              setIsSeatsChanging(false);
-              setSelectedSeats([]);
-              setManagers([]);
-              setSelectedManager("");
-            }}
+            labelId="manager-select-label"
+            id="manager-select"
+            value={selectedManager ? selectedManager.id : ""}
+            label="Select Manager"
+            onChange={handleManagerChange}
+            disabled={managers.length === 0 || isSeatsChanging}
           >
-            {floors.map((floor, index) => (
-              <MenuItem key={index} value={floor}>
-                {floor}
-              </MenuItem>
+            {managers.map((manager) => (
+              <MenuItem key={manager.id} value={manager.id}>{manager.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl fullWidth style={{ marginBottom: '20px', width: '300px' }}>
+          <InputLabel id="manager-select-label">Select Team</InputLabel>
+          <Select
+            labelId="manager-select-label"
+            id="manager-select"
+            value={selectedTeam ? selectedTeam : ""}
+            label="Select Manager"
+            onChange={handleTeamChange}
+            //disabled = {teams.filter(item => item.first_name === selectedManager.first_name && item.last_name === selectedManager.last_name).length == 0}
+            disabled={managers.length === 0 || isSeatsChanging}
+          >
+            {teams.filter(item => item.first_name === selectedManager.first_name && item.last_name === selectedManager.last_name).length == 0 && managers.length !== 0 && <MenuItem key='default' value='default'>Default</MenuItem>}
+            {teams.filter(item => item.first_name === selectedManager.first_name && item.last_name === selectedManager.last_name).map((team) => (
+              <MenuItem key={team.id} value={team.id}>{team.team}</MenuItem>
             ))}
           </Select>
         </FormControl>
       </Box>
-    </Box>
-
-    {HoeList.length > 0 && <TableContainer component={Paper} sx={{ marginTop: '20px', marginBottom: '40px', width: "80%" }}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Category</TableCell>
-            <TableCell>Details</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <TableRow>
-            <TableCell>Seats Assigned By Admin</TableCell>
-            <TableCell>{HOE.seats.length}</TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>Seats Assigned To Managers on {selectedDay}</TableCell>
-            <TableCell>{String(countAllocatedSeats())}</TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>Seats Available on {selectedDay}</TableCell>
-            <TableCell>{String(HOE.seats.length - countAllocatedSeats())}</TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </TableContainer>}
-
-    <FormControl fullWidth style={{ marginBottom: '20px', width: '300px' }}>
-      <InputLabel id="manager-select-label">Select Manager</InputLabel>
-      <Select
-        labelId="manager-select-label"
-        id="manager-select"
-        value={selectedManager ? selectedManager.id : ""}
-        label="Select Manager"
-        onChange={handleManagerChange}
-      >
-        {managers.map((manager) => (
-          <MenuItem key={manager.id} value={manager.id}>{manager.name}</MenuItem>
+      <Box display="flex" flexDirection="row" justifyContent='center' flexWrap='wrap' alignItems="center" gap={2} mb={2}>
+        {days.map((day) => (
+          <Button key={day.id} variant="contained" onClick={() => onClickingDay(day.value)} sx={{ backgroundColor: selectedDay === day.value ? "primary" : "grey" }}>
+            {day.id}
+          </Button>
         ))}
-      </Select>
-    </FormControl>
-    <Box display="flex" flexDirection="row" justifyContent='center' flexWrap='wrap' alignItems="center" gap={2} mb={2}>
-  {days.map((day) => (
-    <Button key={day.id} variant="contained" onClick={() => onClickingDay(day.value)} sx={{ backgroundColor: selectedDay === day.value ? "primary" : "grey" }}>
-      {day.id}
-    </Button>
-  ))}
-</Box>
+      </Box>
 
-{/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */}
-    <Typography variant="h6" >Seats Layout</Typography>
+      {/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */}
+      <Typography variant="h6" >Seats Layout</Typography>
 
-    <Box display="flex" flexDirection="row" gap={2}>
-      <Box p={1} border={1} borderRadius={4}>
-        <Typography variant="body2">Country: {HOE.country}</Typography>
+      <Box display="flex" flexDirection="row" gap={2}>
+        <Box p={1} border={1} borderRadius={4}>
+          <Typography variant="body2">Country: {HOE.country}</Typography>
+        </Box>
+        <Box p={1} border={1} borderRadius={4}>
+          <Typography variant="body2">State: {HOE.state}</Typography>
+        </Box>
+        <Box p={1} border={1} borderRadius={4}>
+          <Typography variant="body2">City: {HOE.city}</Typography>
+        </Box>
+        <Box p={1} border={1} borderRadius={4}>
+          <Typography variant="body2">Campus: {HOE.campus}</Typography>
+        </Box>
+        <Box p={1} border={1} borderRadius={4}>
+          <Typography variant="body2">Floor: {HOE.floor}</Typography>
+        </Box>
       </Box>
-      <Box p={1} border={1} borderRadius={4}>
-        <Typography variant="body2">State: {HOE.state}</Typography>
-      </Box>
-      <Box p={1} border={1} borderRadius={4}>
-        <Typography variant="body2">City: {HOE.city}</Typography>
-      </Box>
-      <Box p={1} border={1} borderRadius={4}>
-        <Typography variant="body2">Campus: {HOE.campus}</Typography>
-      </Box>
-      <Box p={1} border={1} borderRadius={4}>
-        <Typography variant="body2">Floor: {HOE.floor}</Typography>
-      </Box>
-    </Box>
 
-    <Grid container spacing={2} style={{ margin: '20px 20px', width: "90%", display: "flex", justifyContent: "center", maxHeight: "400px", overflowY: "auto" }}>
-      {HoeList.length > 0 && renderSeats()}
-    </Grid>
-
-    <Grid container spacing={5} justifyContent="center" marginBottom={5}>
-      <Grid item>
-        <Box sx={{ width: 20, height: 20, backgroundColor: '#28a745', display: 'inline-block', marginRight: '5px' }} />
-        <Typography variant="body2" display="inline">Available Seats</Typography>
+      <Grid container spacing={2} style={{ margin: '20px 20px', width: "90%", display: "flex", justifyContent: "center", maxHeight: "400px", overflowY: "auto" }}>
+        <>
+        {/*console.log(HoeList.length,"||", selectedManager, "||", selectedTeam)*/}
+          {/*console.log(HoeList.length > 0,"||", isAddingManager, selectedManager !== '', "||", selectedTeam !== '', selectedTeam === 'default')*/}
+          {HoeList.length > 0 && renderSeats()}
+        </>
       </Grid>
-      <Grid item>
-        <Box sx={{ width: 20, height: 20, backgroundColor: '#ffc107', display: 'inline-block', marginRight: '5px' }} />
-        <Typography sx={{ height: 20 }} variant="body2" display="inline">Manager Seats</Typography>
-      </Grid>
-      <Grid item>
-        <Box sx={{ width: 20, height: 20, backgroundColor: '#007bff', display: 'inline-block', marginRight: '5px' }} />
-        <Typography sx={{ height: 20 }} variant="body2" display="inline">Selected Seats</Typography>
-      </Grid>
-      <Grid item>
-        <Box sx={{
-          width: 20, height: 20, background: '#fd7e14', display: 'inline-block', marginRight: '5px', position: 'relative',
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: '50%',
-            backgroundColor: '#ffc107'
-          }
-        }} />
-        <Typography variant="body2" display="inline">Allocated Seats</Typography>
-      </Grid>
-    </Grid>
 
-    {!isSeatsChanging && managers.length > 0 && HOE.seats.length > 0 && !isAddingManager &&
-      <Button variant="contained" color="primary" onClick={onClickingChangeSeats}>Change Seats for {selectedManager.name}</Button>}
-    {isSeatsChanging && !isAddingManager && <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
-      <TextField
-        label="Selected Seats"
-        fullWidth
-        value={selectedSeats}
-        style={{ marginBottom: '25px' }}
-        InputProps={{
-          readOnly: true,
-        }}
-      />
-      <Button variant="contained" color="primary" onClick={onClickingUpdateSeats}>Update Seats for {selectedManager.name}</Button>
-    </Paper>}
+      <Grid container spacing={5} justifyContent="center" marginBottom={5}>
+        <Grid item>
+          <Box sx={{ width: 20, height: 20, backgroundColor: '#28a745', display: 'inline-block', marginRight: '5px' }} />
+          <Typography variant="body2" display="inline">Available Seats</Typography>
+        </Grid>
+        <Grid item>
+          <Box sx={{ width: 20, height: 20, backgroundColor: '#ffc107', display: 'inline-block', marginRight: '5px' }} />
+          <Typography sx={{ height: 20 }} variant="body2" display="inline">Manager Seats</Typography>
+        </Grid>
+        <Grid item>
+          <Box sx={{ width: 20, height: 20, backgroundColor: '#007bff', display: 'inline-block', marginRight: '5px' }} />
+          <Typography sx={{ height: 20 }} variant="body2" display="inline">Selected Seats</Typography>
+        </Grid>
+        <Grid item>
+          <Box sx={{
+            width: 20, height: 20, background: '#fd7e14', display: 'inline-block', marginRight: '5px', position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: '50%',
+              backgroundColor: '#ffc107'
+            }
+          }} />
+          <Typography variant="body2" display="inline">Allocated Seats</Typography>
+        </Grid>
+      </Grid>
 
-    {!isSeatsChanging && !isAddingManager && HoeList.length > 0 && HOE.seats.length > 0 && (HOE.seats.length - countAllocatedSeats()) > 0 &&
-      <Button variant="contained" color="primary" onClick={onClickingAddNewManager} sx={{ marginTop: 5 }} >Add New Manager</Button>}
+      {!isSeatsChanging && managers.length > 0 && HOE.seats.length > 0 && !isAddingManager && teams.length > 0 && (selectedTeam !== '' && selectedTeam !== 'default') &&
+        <Button variant="contained" color="primary" onClick={onClickingChangeSeats}>Change Seats for {selectedManager.name}'s {teams.find(item => item.id === selectedTeam).team}</Button>}
+      {isSeatsChanging && !isAddingManager && <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
+        <TextField
+          label="Selected Seats"
+          fullWidth
+          value={selectedSeats}
+          style={{ marginBottom: '25px' }}
+          InputProps={{
+            readOnly: true,
+          }}
+        />
+        <Box display="flex" flexDirection="column" justifyContent="center" alignItems='center' gap={2}>
+          <Button variant="contained" color="primary" onClick={onClickingUpdateSeats}>Update Seats for {selectedManager.name}'s {teams.find(item => item.id === selectedTeam).team}</Button>
+          <Button variant="contained" color="primary" onClick={onClickingCancel}>Cancel</Button>
+        </Box>
+      </Paper>}
 
-{isSeatsChanging && isAddingManager &&
-  <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
-    <TextField
-      label="First Name"
-      name="firstname"
-      fullWidth
-      value={firstName}
-      onChange={(e) => setFirstName(e.target.value)}
-      style={{ marginBottom: '15px' }}
-      autoFocus
-      onBlur={handleBlur}
-      error={!!firstNameError}
-      helperText={firstNameError}
-      color="success"
-    />
-    <TextField
-      label="Last Name"
-      name="lastname"
-      fullWidth
-      value={lastName}
-      onChange={(e) => setLastName(e.target.value)}
-      style={{ marginBottom: '25px' }}
-      autoFocus
-      onBlur={handleBlur}
-      error={!!lastNameError}
-      helperText={lastNameError}
-      color="success"
-    />
-    <TextField
-      label="Seat Count"
-      type="number"
-      name='seatcount'
-      fullWidth
-      value={seatCount}
-      onChange={(e) => setSeatCount(parseInt(e.target.value))}
-      style={{ marginBottom: '25px' }}
-      inputProps={{ min: 1, max: HOE.seats.length - countAllocatedSeats() }}
-    />
-    <TextField
-      label="Seats Selected Count"
-      name='seatsselectedcount'
-      fullWidth
-      value={selectedSeatCount}
-      style={{ marginBottom: '25px' }}
-      InputProps={{
-        readOnly: true,
-      }}
-      autoFocus
-    />
-    <TextField
-      label="Selected Seats"
-      name='selectedseats'
-      fullWidth
-      value={seatData[selectedDay].join(', ')}
-      style={{ marginBottom: '25px' }}
-      InputProps={{
-        readOnly: true,
-      }}
-      autoFocus
-    />
-    <Button variant="contained" color="primary" onClick={onClickingAddManager}>
-      Add Manager
-    </Button>
-  </Paper>
-}
+      {!isSeatsChanging && !isAddingManager && HoeList.length > 0 && HOE.seats.length > 0 && (HOE.seats.length - countAllocatedSeats()) > 0 &&
+        <Button variant="contained" color="primary" onClick={onClickingAddNewManager} sx={{ marginTop: 5 }} >Add New Manager</Button>}
+
+      {isSeatsChanging && isAddingManager &&
+        <Paper elevation={0} style={{ padding: '20px', marginTop: '20px' }}>
+          <TextField
+            label="First Name"
+            name="firstname"
+            fullWidth
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            style={{ marginBottom: '15px' }}
+            autoFocus
+            onBlur={handleBlur}
+            error={!!firstNameError}
+            helperText={firstNameError}
+            color="success"
+          />
+          <TextField
+            label="Last Name"
+            name="lastname"
+            fullWidth
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            style={{ marginBottom: '25px' }}
+            autoFocus
+            onBlur={handleBlur}
+            error={!!lastNameError}
+            helperText={lastNameError}
+            color="success"
+          />
+          <TextField
+            label="Seat Count"
+            type="number"
+            name='seatcount'
+            fullWidth
+            value={seatCount}
+            onChange={(e) => setSeatCount(parseInt(e.target.value))}
+            style={{ marginBottom: '25px' }}
+            inputProps={{ min: 1, max: HOE.seats.length - countAllocatedSeats() }}
+          />
+          <TextField
+            label="Seats Selected Count"
+            name='seatsselectedcount'
+            fullWidth
+            value={selectedSeatCount}
+            style={{ marginBottom: '25px' }}
+            InputProps={{
+              readOnly: true,
+            }}
+            autoFocus
+          />
+          <TextField
+            label="Selected Seats"
+            name='selectedseats'
+            fullWidth
+            value={seatData[selectedDay].join(', ')}
+            style={{ marginBottom: '25px' }}
+            InputProps={{
+              readOnly: true,
+            }}
+            autoFocus
+          />
+          <Box display="flex" flexDirection="column" justifyContent="center" alignItems='center' gap={2}>
+            <Button variant="contained" color="primary" onClick={onClickingAddManager}>
+              Add Manager
+            </Button>
+            <Button variant="contained" color="primary" onClick={onClickingCancelAddManager}>
+              Cancel
+            </Button>
+          </Box>
+        </Paper>
+      }
 
 
       <Snackbar

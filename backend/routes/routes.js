@@ -27,6 +27,7 @@ router.get('/getHOEFromTable/:id', controller.getHOEFromTable);
 router.get('/getManagersByHOEIdFromTable/:id', controller.getManagersByHOEIdFromTable);
 router.put('/updateManagerData/:id', controller.updateManagerData);
 router.post('/addNewManager', controller.addNewManager);
+router.get('/getTeams', controller.getTeams);
 
 // Employee page route
 router.get('/getSeatData', controller.getSeatData);
@@ -37,6 +38,13 @@ router.get('/getManagerFromTable/:id', controller.getManagerFromTable);
 router.get('/getEmployeesByManagerIdFromTable/:id', controller.getEmployeesByManagerIdFromTable);
 router.put('/updateEmployeeSeatData/:id', controller.updateEmployeeSeatData);
 router.post('/addNewEmployee', controller.addNewEmployee);
+router.get('/getManagerTeamsFromTable', controller.getManagerTeamsFromTable);
+router.get('/searchTeam', controller.searchTeam);
+router.post('/addTeam', controller.addTeam);
+router.put('/editTeam', controller.editTeam);
+router.delete('/deleteTeam', controller.deleteTeam);
+router.put('/assignEmployeeToTeam', controller.assignEmployeeToTeam);
+router.put('/deleteEmployeeFromTeam', controller.deleteEmployeeFromTeam);
 
 //Matrix
 
@@ -58,5 +66,41 @@ router.get('/getGraphDetailsForManager', controller.getGraphDetailsForManager);
 
 //Profile
 router.post('/changePassword', controller.changePassword);
+
+//Floor Plan
+router.get('/countries', controller.countries);
+router.get('/states', controller.states);
+router.get('/cities', controller.cities);
+router.get('/campuses', controller.campuses);
+router.get('/searchCountry', controller.searchCountry)
+router.get('/searchState', controller.searchState)
+router.get('/searchCity', controller.searchCity)
+router.get('/searchCampus', controller.searchCampus)
+
+//HOE plan
+router.get("/getManagerTeams", controller.getManagerTeamsController);
+router.post("/saveSeatingArrangement", controller.saveSeatingArrangement);
+router.get("/seating-names", controller.getSeatingAllocationNames);
+router.get("/seating-arrangement/:name", controller.getSeatingArrangementByName);
+router.delete("/seating-arrangement/:name", controller.deleteSeatingArrangement);
+
+//Seat Pool
+router.get('/getFreeSeats', controller.getAvailableSeats);
+
+router.post('/selectSeat', controller.selectSeat);
+
+router.get('/getFreeSeatsFromSelected', controller.getSeatsFromEmployeeSelected);
+
+router.get('/userBookedSeats', controller.getSeatsBookedByUser);
+
+// GET all seats booked by an employee
+router.get("/getSelectedSeats",controller.getSelectedSeats);
+
+// DELETE (cancel) a booked seat by an employee
+router.delete("/cancelSeat", controller.cancelSeat);
+
+router.post("/markNoShow", controller.markNoShow);
+
+router.get("/getFilteredNoShows", controller.getFilteredNoShows);
 
 module.exports = router;

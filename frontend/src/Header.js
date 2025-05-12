@@ -30,19 +30,19 @@ export default function Header() {
   }
 
   const handleHome = () => {
-      if (location.pathname !== "/seatAllocationAdmin" && decoded.role === 'admin'){
-        console.log(decoded);
-        return navigate("/seatAllocationAdmin");
-      }
-      if (location.pathname !== "/hoe" && decoded.role === 'hoe'){
-        return navigate("/hoe");
-      }
-      if (location.pathname !== "/manager" && decoded.role === 'manager'){
-        return navigate("/manager");
-      }
-      if (location.pathname !== "/employee" && decoded.role === 'employee'){
-        return navigate("/employee");
-      }
+    if (location.pathname !== "/seatAllocationAdmin" && decoded.role === 'admin') {
+      console.log(decoded);
+      return navigate("/seatAllocationAdmin");
+    }
+    if (location.pathname !== "/hoe" && decoded.role === 'hoe') {
+      return navigate("/hoe");
+    }
+    if (location.pathname !== "/manager" && decoded.role === 'manager') {
+      return navigate("/manager");
+    }
+    if (location.pathname !== "/employee" && decoded.role === 'employee') {
+      return navigate("/employee");
+    }
   };
 
   const handleLogout = () => {
@@ -62,9 +62,27 @@ export default function Header() {
     }
   };
 
+  const handleNoShowSeats = () => {
+    if (location.pathname !== "/noShowSeats") {
+      navigate("/noShowSeats");
+    }
+  };
+
+  const handleSeatPool = () => {
+    if (location.pathname !== "/seatpool") {
+      navigate("/seatpool");
+    }
+  };
+
   const handlePlan = () => {
-    if (location.pathname !== "/plan") {
-      navigate("/plan");
+    if (decoded.role === 'admin') {
+      if (location.pathname !== "/plan") {
+        navigate("/plan");
+      }
+    } else {
+      if (location.pathname !== "/hoeplan") {
+        navigate("/hoeplan");
+      }
     }
   };
 
@@ -82,7 +100,7 @@ export default function Header() {
           </Typography>
           {!hideHeaderOptions && (
             <>
-              {token && decoded.role === "admin" && <Typography
+              {token && (decoded.role === "admin" || decoded.role === "hoe") && <Typography
                 variant="subtitle1"
                 component="div"
                 onClick={handlePlan}
@@ -101,6 +119,26 @@ export default function Header() {
               <IconButton color="inherit" onClick={handleProfile}>
                 <PersonIcon />
               </IconButton>
+              {token && decoded.role === "employee" && (
+                  <Typography
+                    variant="subtitle1"
+                    component="div"
+                    onClick={handleNoShowSeats}
+                    sx={{ padding: "1%", cursor: "pointer", "&:hover": { color: "white" } }}
+                  >
+                    noShowSeats
+                  </Typography>
+                )}
+                {token && decoded.role === "employee" && (
+                  <Typography
+                    variant="subtitle1"
+                    component="div"
+                    onClick={handleSeatPool}
+                    sx={{ padding: "1%", cursor: "pointer", "&:hover": { color: "white" } }}
+                  >
+                    freePool
+                  </Typography>
+                )}
               <Typography
                 variant="subtitle1"
                 component="div"
