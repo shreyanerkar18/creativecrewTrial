@@ -74,21 +74,14 @@ const GraphsbyHoe = () => {
         });
 
         const hoeId = response1.data[0].id;
-
-        console.log(hoeId);
         setHoeId(hoeId);
 
         const response = await axios.get(`${baseurl}/getManagerAllocationData`, {
           params: { hoeId }
         });
 
-        console.log(response.data);
-
         const floorGroupedData = response.data.reduce((acc, item) => {
           const key = `${item.country} - ${item.state} - ${item.city} - ${item.campus} - Floor ${item.floor}`;
-          console.log(item);
-          if (item.allocated_seats[0] === null) return acc;
-
           if (!acc[key]) {
             acc[key] = { allocated: item.allocated_seats.length, occupied: 0, colorIndex: Object.keys(acc).length % colors.length };
           }
@@ -107,8 +100,6 @@ const GraphsbyHoe = () => {
 
           return acc;
         }, {});
-
-        console.log("floor", floorGroupedData);
 
         const floorLabels = Object.keys(floorGroupedData);
         const allocatedSeats = floorLabels.map(label => floorGroupedData[label].allocated);
@@ -181,7 +172,7 @@ const GraphsbyHoe = () => {
           }
           return seatsData[selectedDay] && seatsData[selectedDay].length > 0;
         }).map(item => ({
-          name: `${item.first_name} ${item.last_name} - ${item.team}`,
+          name: `${item.first_name} ${item.last_name}`,
           floorKey: `${item.country} - ${item.state} - ${item.city} - ${item.campus} - Floor ${item.floor}`
         }));
 

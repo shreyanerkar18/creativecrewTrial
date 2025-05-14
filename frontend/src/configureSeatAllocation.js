@@ -1,8 +1,7 @@
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import { TextField, IconButton, InputAdornment, Tooltip } from "@mui/material";
-import CloseIcon from '@mui/icons-material/Close';
+import { TextField } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
@@ -25,13 +24,9 @@ import "./seatAllocation.css"; // Make sure you have the correct path and name
 import { baseurl } from './utils';
 const initialState = {
   country: "",
-  countryId : '',
   state: "",
-  stateId: '',
   city: "",
-  cityId: '',
   campus: "",
-  campusId: '',
   floor: "",
   capacity: "",
 };
@@ -43,14 +38,9 @@ const ConfigureSeatAllocation = () => {
   const [allocationData, setData] = React.useState([]);
   const [allocateSeatSecFlag, setAllocateSeatSecFlag] = useState(false);
   const [capacityList, setCapacityList] = React.useState([]);
-  const [countries, setCountries] = React.useState([]);
-  const [states, setStates] = React.useState([]);
-  const [cities, setCities] = React.useState([]);
-  const [campuses, setCampuses] = React.useState([]);
   const [configFlag, setConfigFlag] = React.useState("Add");
   const [currentId, setCurrentId] = React.useState(0);
   const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [snackBarText, setSnackBarText] = useState('');
   const [isEditingCapacity, setIsEditingCapacity] = useState(false);
   const [errors, setErrors] = React.useState({
     country: '',
@@ -59,18 +49,10 @@ const ConfigureSeatAllocation = () => {
     campus: '',
     floor: ''
   });
-
-  const [isAddingNewCountry, setIsAddingNewCountry] = useState(false);
-  const [isAddingNewState, setIsAddingNewState] = useState(false);
-  const [isAddingNewCity, setIsAddingNewCity] = useState(false);
-  const [isAddingNewCampus, setIsAddingNewCampus] = useState(false);
-
-
   const navigate = useNavigate();
 
   const handleSnackbarClose = () => {
     setOpenSnackbar(false);
-    setSnackBarText('')
   };
 
   const snackbarStyle = {
@@ -83,10 +65,6 @@ const ConfigureSeatAllocation = () => {
 
   React.useEffect(() => {
     getConfiguredData();
-    getCountries();
-    getStates();
-    getCities();
-    getCampuses();
   }, []);
   const getConfiguredData = async () => {
     await axios
@@ -100,71 +78,6 @@ const ConfigureSeatAllocation = () => {
         console.log(err);
       });
   };
-
-  const getCountries = async () => {
-    await axios.get(`${baseurl}/countries`)
-      .then((res) => {
-        if (res.data && res.data.length > 0) {
-          console.log("countries", res.data)
-          setCountries(res.data);
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  }
-
-  const getStates = async () => {
-    await axios.get(`${baseurl}/states`)
-      .then((res) => {
-        if (res.data && res.data.length > 0) {
-          console.log("states", res.data)
-          setStates(res.data);
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  }
-
-  const getCities = async () => {
-    await axios.get(`${baseurl}/cities`)
-      .then((res) => {
-        if (res.data && res.data.length > 0) {
-          setCities(res.data);
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  }
-
-  const getCampuses = async () => {
-    await axios.get(`${baseurl}/campuses`)
-      .then((res) => {
-        if (res.data && res.data.length > 0) {
-          setCampuses(res.data);
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  }
-
-  const onClickingAddNewCountry = () => {
-    setIsAddingNewCountry(true);
-  }
-  const onClickingAddNewState = () => {
-    setIsAddingNewState(true);
-  }
-  const onClickingAddNewCity = () => {
-    setIsAddingNewCity(true);
-  }
-  const onClickingAddNewCampus = () => {
-    setIsAddingNewCampus(true);
-  }
-
-
   const handleChange = (event) => {
     setValues({ ...values, [event.target.name]: event.target.value });
     setErrors({ ...errors, [event.target.name]: "" })
@@ -202,170 +115,64 @@ const ConfigureSeatAllocation = () => {
 
   const validatingDataWhileSeatConfiguration = async () => {
     const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-    } else {
-      setErrors({});
-    }
-    if (!values.country || !values.state || !values.city || !values.floor || !values.capacity || !values.campus) {
+        if (Object.keys(validationErrors).length > 0) {
+          setErrors(validationErrors);
+        } else {
+          setErrors({});
+        }
+        if (!values.country || !values.state || !values.city || !values.floor || !values.capacity || !values.campus) {
 
-      return;
+          return;
 
-    }
-    if (configFlag == "Edit") {
-      editCapacity();
-    } else {
-      createCapacity();
-    }
-    setAllocateSeatSecFlag(false);
-    setIsEditingCapacity(false);
+        }
+        if (configFlag == "Edit") {
+          editCapacity();
+        } else {
+          createCapacity();
+        }
+        setAllocateSeatSecFlag(false);
+        setIsEditingCapacity(false);
   }
 
   const handleSubmitAllocation = async () => {
-    if (values.country === '' || values.state === '' || values.city === '' || values.campus === '' || values.floor === '' || values.capacity === '') {
-      return
-    }
+    if (!isEditingCapacity) {
+    try {
 
-    else if (isAddingNewCountry) {
-        try {
-  
-          const response = await axios.get(`${baseurl}/searchCountry`, {
-            params : {
-            country : values.country
-          }});
-          console.log(response);
-          if (response.data !== '' && response.data.data.length > 0) {
-            setSnackBarText(response.data.msg);
-            setOpenSnackbar(true);
-          } else {
-            getSeatConfiguration();
-          }
-        } catch (err) {
-          console.error('Error fetching data:', err);
-        }
-      }
-    
-    else if (isAddingNewState) {
-      try {
-
-        const response = await axios.get(`${baseurl}/searchState`, {
-          params : {
-          state : values.state
-        }});
-        console.log(response);
-        if (response.data !== '' && response.data.data.length > 0) {
-          setSnackBarText(response.data.msg);
-          setOpenSnackbar(true);
-        } else {
-          getSeatConfiguration();
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      }
-    }
-    else if (isAddingNewCity) {
-      try {
-
-        const response = await axios.get(`${baseurl}/searchCity`, {
-          params : {
-            city : values.city
-        }});
-        console.log(response);
-        if (response.data !== '' && response.data.data.length > 0) {
-          setSnackBarText(response.data.msg);
-          setOpenSnackbar(true);
-        } else {
-          getSeatConfiguration();
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      }
-    }
-    else if (isAddingNewCampus) {
-      try {
-
-        const response = await axios.get(`${baseurl}/searchCampus`, {
-          params : {
-            campus : values.campus
-        }});
-        console.log(response);
-        if (response.data !== '' && response.data.data.length > 0) {
-          setSnackBarText(response.data.msg);
-          setOpenSnackbar(true);
-        } else {
-          getSeatConfiguration();
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      }
-    }
-    else if (!isEditingCapacity) {
-      getSeatConfiguration();
-    }
-     else {
-      validatingDataWhileSeatConfiguration();
-    }
-
-  };
-  const getSeatConfiguration = async () => {
-     if (!isEditingCapacity) {
-      try {
-
-        const response = await axios.get(`${baseurl}/getFloorConfiguration`, {
-          params: {
-            campus: values.campus,
-            floor: values.floor,
-            country: values.country,
-            state: values.state,
-            city: values.city
-          }
-        });
-        console.log(response);
-        console.log(response.data.length);
-
-        if (response.data.result.length === 0) {
-          validatingDataWhileSeatConfiguration();
-        }
-        else {
-          setSnackBarText(response.data.msg);
-          setOpenSnackbar(true);
-          
-        }
-
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      }
-    }
-  }
-
-  const createCapacity = async () => {
-    await axios
-      .post(`${baseurl}/createSeatingCapacityAdmin`, 
-        {
+      const response = await axios.get(`${baseurl}/getFloorConfiguration`, {
+        params: {
           campus: values.campus,
           floor: values.floor,
           country: values.country,
           state: values.state,
-          city: values.city,
-          capacity : values.capacity,
-          isAddingNewCampus,
-          isAddingNewCity,
-          isAddingNewCountry,
-          isAddingNewState
-      })
+          city: values.city
+        }
+      });
+      // console.log(response.data);
+      // console.log(response.data.length);
+
+      if (response.data.length === 0) {
+        validatingDataWhileSeatConfiguration();
+      }
+      else {
+        setOpenSnackbar(true);
+      }
+
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  } else {
+    validatingDataWhileSeatConfiguration();
+  }
+
+  };
+  const createCapacity = async () => {
+    await axios
+      .post(`${baseurl}/createSeatingCapacityAdmin`, values)
       .then((res) => {
         if (res.data) {
-          getCountries();
-          getStates();
-          getCities();
-          getCampuses();
           setCapacityList(res.data);
           getConfiguredData();
           clearAllocation();
-          setIsAddingNewCountry(false);
-          setIsAddingNewState(false);
-          setIsAddingNewCity(false);
-          setIsEditingCapacity(false);
         }
       })
       .catch((err) => {
@@ -429,7 +236,7 @@ const ConfigureSeatAllocation = () => {
           <Grid
             item
             md={3}
-            sx={{ maxWidth: 400, margin: "4%" }}
+            sx={{ maxWidth: 130, margin: "4%" }}
             className="allocateContainer"
           >
             <Box
@@ -449,308 +256,104 @@ const ConfigureSeatAllocation = () => {
               <h2 className="fontFamily">{configFlag} new seating capacity</h2>
             </Box>
             <Box sx={{ minWidth: 120 }}>
-              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium" required>
-                {!isAddingNewCountry ? <><InputLabel id="demo-simple-select-label">Country</InputLabel>
-                  <Select
-                    labelId="demo-simple-select-label"
-                    id="demo-simple-select"
-                    value={values.country}
-                    label="Country"
-                    name="country"
-                    disabled={configFlag == "Edit"}
-                    onChange={(e) => {
-                      setValues({ ...values, country: e.target.value === 'newCountry' ? '' : e.target.value, state: "", city: "", campus: "", floor: "" });
-                      setErrors({ ...errors, [e.target.name]: "" });
-                      if (e.target.value === 'newCountry') {
-                        setIsAddingNewCountry(true);
-                        setIsAddingNewState(true);
-                        setIsAddingNewCity(true);
-                        setIsAddingNewCampus(true);
-                      }
-                    }}
-                  >
-                    <MenuItem key={'newCountry'} value={"newCountry"} sx={{
-                      color: '#ABB6B5',
-                      fontStyle: 'italic',
-                      '&:hover': { backgroundColor: '#BBF9DD', color: '#ABB6B5' }, // Hover effects
-                    }}>Add New Country</MenuItem>
-                    {countries.map((item) => (
-                      <MenuItem key={item.country} value={item.country}>
-                        {item.country}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </>
-                  :
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <TextField
-                      required
-                      label='New Country'
-                      value={values.country}
-                      onChange={(e) => {
-                        const input = e.target.value;
-                        const capitalized = input
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ');
-                        setValues({ ...values, country: capitalized })
-                      }}
-                      onBlur={() => {
-                        setValues({ ...values, country: values.country.trim() });
-                      }}
-                      fullWidth
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <Tooltip title="Cancel and return to dropdown" arrow>
-                              <IconButton
-                                aria-label="cancel"
-                                onClick={() => {
-                                  setIsAddingNewCountry(false); // Go back to Select dropdown
-                                  setIsAddingNewState(false);
-                                  setIsAddingNewCity(false);
-                                  setIsAddingNewCampus(false);
-                                  setValues({ ...values, country: "", state: "", city: "", campus: "", floor : "" });
-                                }}
-                              >
-                                <CloseIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Box>
-                }
-                {errors.country ? <div className="fontFamily" style={{ color: "red", paddingTop: "5px", fontSize: "14px" }}>Required*</div> : ""}
+              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                <InputLabel id="demo-simple-select-label">Country</InputLabel>
+                <Select
+                  labelId="demo-simple-select-label"
+                  id="demo-simple-select"
+                  value={values.country}
+                  label="Country"
+                  name="country"
+                  disabled={configFlag == "Edit"}
+                  onChange={(e) => {
+                    setValues({ ...values, country: e.target.value, state: "", city: "", campus: "", floor: "" });
+                    setErrors({ ...errors, [e.target.name]: "" });
+                  }}
+                >
+                  <MenuItem value={"India"}>India</MenuItem>
+                  <MenuItem value={"UK"}>UK</MenuItem>
+                </Select>
+                {errors.country ? <div className="fontFamily" style={{ color: "red", paddingTop: "5px", fontSize: "14px" }}>Country is required</div> : ""}
 
               </FormControl>
 
             </Box>
             <Box sx={{ minWidth: 120 }}>
-              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium" required>
-                {!isAddingNewState ? <><InputLabel id="demo-simple-select-label">State</InputLabel>
-                  <Select
-                    labelId="demo-simple-select-label"
-                    id="demo-simple-select"
-                    value={values.state}
-                    label="State"
-                    name="state"
-                    disabled={configFlag == "Edit"}
-                    onChange={(e) => {
-                      setValues({ ...values, state: e.target.value === 'newState' ? '' : e.target.value, city: "", campus: "", floor: "" });
-                      setErrors({ ...errors, [e.target.name]: "" });
-                      if (e.target.value === 'newState') {
-                        setIsAddingNewState(true);
-                        setIsAddingNewCity(true);
-                        setIsAddingNewCampus(true);
-                      }
-                    }}
-                  >
-                    {values.country !== '' && <MenuItem key={'newState'} value={"newState"} sx={{
-                      color: '#ABB6B5',
-                      fontStyle: 'italic',
-                      '&:hover': { backgroundColor: '#BBF9DD', color: '#ABB6B5' }, // Hover effects
-                    }} >Add New State</MenuItem>}
-                    {states.filter(item => item.country === values.country).map((item) => (
-                      <MenuItem key={item.state} value={item.state}>
-                        {item.state}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </>
-                  :
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <TextField
-                      required
-                      label='New State'
-                      value={values.state}
-                      onChange={(e) => {
-                        const input = e.target.value;
-                        const capitalized = input
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ');
-                        setValues({ ...values, state: capitalized })
-                      }}
-                      onBlur={() => {
-                        setValues({ ...values, state: values.state.trim() });
-                      }}
-                      fullWidth
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <Tooltip title="Cancel and return to dropdown" arrow>
-                              <IconButton
-                                aria-label="cancel"
-                                onClick={() => {
-                                  setIsAddingNewState(false); // Go back to Select dropdown
-                                  setIsAddingNewCity(false);
-                                  setIsAddingNewCampus(false);
-                                  setValues({ ...values, state: "", city: "", campus: "", floor : "" });
-                                }}
-                              >
-                                <CloseIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Box>
-                }
+              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                <InputLabel id="demo-simple-select-label">State</InputLabel>
+                <Select
+                  labelId="demo-simple-select-label"
+                  id="demo-simple-select"
+                  value={values.state}
+                  label="State"
+                  name="state"
+                  disabled={configFlag == "Edit"}
+                  onChange={(e) => {
+                    setValues({ ...values, state: e.target.value, city: "", campus: "", floor: "" });
+                    setErrors({ ...errors, [e.target.name]: "" });
+                  }}
+                >
+                  {values.country === "India" && <MenuItem value={"Telangana"}>Telangana</MenuItem>}
+                  {values.country === "India" && <MenuItem value={"Karnataka"}>Karnataka</MenuItem>}
+                  {values.country === "UK" && <MenuItem value={"England"}>England</MenuItem>}
+
+                </Select>
                 {errors.state ? <div className="fontFamily" style={{ color: "red", paddingTop: "5px", fontSize: "12px" }}>State is required</div> : ""}
               </FormControl>
             </Box>
             <Box sx={{ minWidth: 120 }}>
-              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium" required>
-                {!isAddingNewCity ? <><InputLabel id="demo-simple-select-label">City</InputLabel>
-                  <Select
-                    labelId="demo-simple-select-label"
-                    id="demo-simple-select"
-                    value={values.city}
-                    label="City"
-                    name="city"
-                    disabled={configFlag == "Edit"}
-                    onChange={(e) => {
-                      setValues({ ...values, city: e.target.value === 'newCity' ? '' : e.target.value, campus: "", floor: "" });
-                      setErrors({ ...errors, [e.target.name]: "" });
-                      if (e.target.value === 'newCity') {
-                        setIsAddingNewCity(true);
-                        setIsAddingNewCampus(true);
-                      }
-                    }}
-                  >
-                    {values.state !== '' && <MenuItem key={'newCity'} value={"newCity"} sx={{
-                      color: '#ABB6B5',
-                      fontStyle: 'italic',
-                      '&:hover': { backgroundColor: '#BBF9DD', color: '#ABB6B5' }, // Hover effects
-                    }} >Add New City</MenuItem>}
-                    {cities.filter(item => item.state === values.state).map((item) => (
-                      <MenuItem key={item.city} value={item.city}>
-                        {item.city}
-                      </MenuItem>
-                    ))}
+              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                <InputLabel id="demo-simple-select-label">City</InputLabel>
+                <Select
+                  labelId="demo-simple-select-label"
+                  id="demo-simple-select"
+                  value={values.city}
+                  label="City"
+                  name="city"
+                  disabled={configFlag == "Edit"}
+                  onChange={(e) => {
+                    setValues({ ...values, city: e.target.value, campus: "", floor: "" });
+                    setErrors({ ...errors, [e.target.name]: "" });
+                  }}
+                >
+                  {values.state === "Telangana" && <MenuItem value={"Hyderabad"}>Hyderabad</MenuItem>}
+                  {values.state === "Karnataka" && <MenuItem value={"Bengaluru"}>Bengaluru</MenuItem>}
+                  {values.state === "England" && <MenuItem value={"London"}>London</MenuItem>}
 
-                  </Select>
-                </>
-                  :
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <TextField
-                      required
-                      label='New City'
-                      value={values.city}
-                      onChange={(e) => {
-                        const input = e.target.value;
-                        const capitalized = input
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ');
-                        setValues({ ...values, city: capitalized })
-                      }}
-                      onBlur={() => {
-                        setValues({ ...values, city: values.city.trim() });
-                      }}
-                      fullWidth
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <Tooltip title="Cancel and return to dropdown" arrow>
-                              <IconButton
-                                aria-label="cancel"
-                                onClick={() => {
-                                  setIsAddingNewCity(false);
-                                  setIsAddingNewCampus(false);
-                                  setValues({ ...values, city: "", campus: "", floor : "" });
-                                }}
-                              >
-                                <CloseIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Box>
-                }
+                </Select>
                 {errors.city ? <div className="fontFamily" style={{ color: "red", paddingTop: "5px", fontSize: "12px" }}>City is required</div> : ""}
 
               </FormControl>
             </Box>
             <Box sx={{ minWidth: 120 }}>
-              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium" required>
-                {!isAddingNewCampus ? <><InputLabel id="demo-simple-select-label">Campus</InputLabel>
-                  <Select
-                    labelId="demo-simple-select-label"
-                    id="demo-simple-select"
-                    value={values.campus}
-                    label="Location"
-                    name="campus"
-                    disabled={configFlag == "Edit"}
-                    onChange={(e) => {
-                      setValues({ ...values, campus: e.target.value === 'newCampus' ? '' : e.target.value, floor: "" });
-                      setErrors({ ...errors, [e.target.name]: "" });
-                      if (e.target.value === 'newCampus') setIsAddingNewCampus(true);
-                    }}
-                  >
-                    {values.city !== '' && <MenuItem key={'newCampus'} value={"newCampus"} sx={{
-                      color: '#ABB6B5',
-                      fontStyle: 'italic',
-                      '&:hover': { backgroundColor: '#BBF9DD', color: '#ABB6B5' }, // Hover effects
-                    }} >Add New Campus</MenuItem>}
-                    {campuses.filter(item => item.city === values.city).map((item) => (
-                      <MenuItem key={item.campus} value={item.campus}>
-                        {item.campus}
-                      </MenuItem>
-                    ))}
+              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
+                <InputLabel id="demo-simple-select-label">Location</InputLabel>
+                <Select
+                  labelId="demo-simple-select-label"
+                  id="demo-simple-select"
+                  value={values.campus}
+                  label="Location"
+                  name="campus"
+                  disabled={configFlag == "Edit"}
+                  onChange={(e) => {
+                    setValues({ ...values, campus: e.target.value, floor: "" });
+                    setErrors({ ...errors, [e.target.name]: "" });
+                  }}
+                >
+                  {values.city === "Hyderabad" && <MenuItem value={"Knowledge City"}>Knowledge City</MenuItem>}
+                  {values.city === "Hyderabad" && <MenuItem value={"Mindspace"}>Mindspace</MenuItem>}
+                  {values.city === "Bengaluru" && <MenuItem value={"M E Business Park"}>M E Business Park</MenuItem>}
+                  {values.city === "Bengaluru" && <MenuItem value={"Manyata Tech Park"}>Manyata Tech Park</MenuItem>}
+                  {values.city === "London" && <MenuItem value={"Gresham Street"}>Gresham Street</MenuItem>}
 
 
-                  </Select>
-                </>
-                  :
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <TextField
-                      required
-                      label='New Campus'
-                      value={values.campus}
-                      onChange={(e) => {
-                        const input = e.target.value;
-                        const capitalized = input
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ');
-                        setValues({ ...values, campus: capitalized })
-                      }}
-                      onBlur={() => {
-                        setValues({ ...values, campus: values.campus.trim() });
-                      }}
-                      fullWidth
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <Tooltip title="Cancel and return to dropdown" arrow>
-                              <IconButton
-                                aria-label="cancel"
-                                onClick={() => {
-                                  setIsAddingNewCampus(false);
-                                  setValues({ ...values, campus: "", floor: "" });
-                                }}
-                              >
-                                <CloseIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Box>
-                }
+                </Select>
                 {errors.campus ? <div className="fontFamily" style={{ color: "red", paddingTop: "5px", fontSize: "12px" }}>Location is required</div> : ""}
 
               </FormControl>
             </Box>
             <Box sx={{ minWidth: 120 }}>
-              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium" required>
+              <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
                 <InputLabel id="demo-simple-select-label">Floor</InputLabel>
                 <Select
                   labelId="demo-simple-select-label"
@@ -782,7 +385,6 @@ const ConfigureSeatAllocation = () => {
               <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
                 {/* <InputLabel id="demo-simple-select-label">No of seats</InputLabel> */}
                 <TextField
-                  required
                   id="outlined-number"
                   label="Allocation seats"
                   type="number"
@@ -896,13 +498,14 @@ const ConfigureSeatAllocation = () => {
 
         <Snackbar
           open={openSnackbar}
-          autoHideDuration={4000}
+          autoHideDuration={2000}
           onClose={handleSnackbarClose}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
           style={snackbarStyle}
         >
           <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
-            {snackBarText}
+            Already floor plan created with this data.
+            Please change data and try again.
           </Alert>
         </Snackbar>
       </Grid>

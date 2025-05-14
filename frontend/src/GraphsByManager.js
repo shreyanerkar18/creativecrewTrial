@@ -2,15 +2,9 @@ import React, { useEffect, useState, useContext } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { baseurl } from "./utils";
 import axios from 'axios';
-import { Container, Typography, Select, MenuItem, InputLabel, FormControl } from '@mui/material';
+import { Container, Typography } from '@mui/material';
 import { AuthContext } from "./AuthProvider";
 import { jwtDecode } from 'jwt-decode';
-
-// import {
-//   Button, Grid, Typography, Select, MenuItem, InputLabel, FormControl, Paper, TextField, Box, Snackbar, Alert,
-//   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
-// } from '@mui/material';
-
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,6 +15,7 @@ import {
   Legend
 } from 'chart.js';
 
+// Register required components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -31,16 +26,21 @@ ChartJS.register(
 );
 
 const GraphsbyManager = () => {
-  const [managerId, setManagerId] = useState([]);
-  const [selectedTeam, setSelectedTeam] = useState('');
-  const [teamOptions, setTeamOptions] = useState([]);
+  const [managerId, setManagerId] = useState('');
   const [floorGraphData, setFloorGraphData] = useState(null);
 
   const { token } = useContext(AuthContext);
   const decoded = jwtDecode(token);
 
+  // Colors for allocated and occupied seats
+  const allocatedColor = 'rgba(75, 192, 192, 0.6)';
+  const allocatedBorderColor = 'rgba(75, 192, 192, 1)';
+  const occupiedColor = 'rgba(255, 159, 64, 0.6)';
+  const occupiedBorderColor = 'rgba(255, 159, 64, 1)';
+
+  // Fetch manager allocation data
   useEffect(() => {
-    const fetchManagerTeams = async () => {
+    const fetchManagerId = async () => {
       try {
         const response = await axios.get(`${baseurl}/getManagerIdForGraph`, {
           params: {
@@ -49,105 +49,124 @@ const GraphsbyManager = () => {
             lastName: decoded.lastName
           }
         });
-
-        const managers = response.data.map(item => ({ id: item.id, team: item.team || "Default" }));
-
-        // Extract unique teams & sort them alphabetically
-        const sortedTeams = [...new Set(managers.map(manager => manager.team))].sort();
-
-        setManagerId(managers.map(manager => manager.id));
-        setTeamOptions(sortedTeams);
-
-        // Automatically set "Default" if present
-        setSelectedTeam(sortedTeams.includes("Default") ? "Default" : sortedTeams[0]);
-
+        setManagerId(response.data[0].id);
       } catch (error) {
-        console.error('Error fetching manager Ids:', error);
+        console.error('Error fetching manager Id for graph:', error);
       }
-    };
-
-    fetchManagerTeams();
-  }, []);
-
-
-  useEffect(() => {
-    if (managerId.length > 0 && selectedTeam) {
-      fetchManagerData();
     }
-  }, [managerId, selectedTeam]);
 
-  const fetchManagerData = async () => {
-    try {
-      const response = await axios.get(`${baseurl}/getGraphDetailsForManager`, {
-        params: {
-          managerId: managerId
-        }
-      });
-
-      const filteredData = response.data.filter(item => item.manager_team === selectedTeam);
-
-      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-
-      const dayGroupedData = days.reduce((acc, day) => {
-        acc[day] = { allocated: 0, occupied: 0 };
-        return acc;
-      }, {});
-
-      filteredData.forEach(item => {
-        days.forEach(day => {
-          if (item.manager_seats && item.manager_seats[day]) {
-            dayGroupedData[day].allocated = item.manager_seats[day].length;
-          }
-
-          if (item.occupied_seats && day === item.day) {
-            dayGroupedData[day].occupied = item.occupied_seats.filter(seat => seat !== null).length;
+    const fetchManagerData = async () => {
+      try {
+        const response = await axios.get(`${baseurl}/getGraphDetailsForManager`, {
+          params: {
+            managerId: managerId
           }
         });
-      });
-
-      setFloorGraphData({
-        labels: Object.keys(dayGroupedData),
-        datasets: [
-          {
-            label: 'Allocated Seats',
-            data: Object.values(dayGroupedData).map(d => d.allocated),
-            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1,
-          },
-          {
-            label: 'Occupied Seats',
-            data: Object.values(dayGroupedData).map(d => d.occupied),
-            backgroundColor: 'rgba(255, 159, 64, 0.6)',
-            borderColor: 'rgba(255, 159, 64, 1)',
-            borderWidth: 1,
+    
+        console.log('API Response:', response.data);
+    
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    
+        // Initialize dayGroupedData with zero counts
+        const dayGroupedData = days.reduce((acc, day) => {
+          acc[day] = { allocated: 0, occupied: 0 };
+          return acc;
+        }, {});
+    
+        response.data.forEach(item => {
+          days.forEach(day => {
+            if (item.manager_seats && item.manager_seats[day]) {
+              // Directly assign the length of allocated seats for the day
+              dayGroupedData[day].allocated = item.manager_seats[day].length;
+            }
+    
+            if (item.occupied_seats && day === item.day) {
+              // Directly assign the length of occupied seats for the day
+              dayGroupedData[day].occupied = item.occupied_seats.filter(seat => seat !== null).length;
+            }
+          });
+        });
+    
+        const dayLabels = Object.keys(dayGroupedData);
+        const allocatedSeats = dayLabels.map(label => dayGroupedData[label].allocated);
+        const occupiedSeats = dayLabels.map(label => dayGroupedData[label].occupied);
+    
+        console.log('Day Grouped Data:', dayGroupedData);
+        console.log('Allocated Seats:', allocatedSeats);
+        console.log('Occupied Seats:', occupiedSeats);
+    
+        setFloorGraphData({
+          labels: dayLabels,
+          datasets: [
+            {
+              label: 'Allocated Seats',
+              data: allocatedSeats,
+              backgroundColor: allocatedColor,
+              borderColor: allocatedBorderColor,
+              borderWidth: 1,
+              maxBarThickness: 50,
+              minBarThickness: 10
+            },
+            {
+              label: 'Occupied Seats',
+              data: occupiedSeats,
+              backgroundColor: occupiedColor,
+              borderColor: occupiedBorderColor,
+              borderWidth: 1,
+              maxBarThickness: 50,
+              minBarThickness: 10
+            }
+          ],
+          options: {
+            responsive: true,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(tooltipItem) {
+                    return `${tooltipItem.dataset.label}: ${tooltipItem.raw}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: 'Day'
+                }
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Number of Seats'
+                }
+              }
+            }
           }
-        ],
-      });
+        });
+    
+      } catch (error) {
+        console.error('Error fetching manager data for graph:', error);
+      }
+    };                                
+                    
 
-    } catch (error) {
-      console.error('Error fetching manager data:', error);
-    }
-  };
+    fetchManagerId();
+    managerId !== '' && fetchManagerData();
+  }, [managerId]);
 
   return (
-    <Container>
-      <FormControl sx={{ minWidth: 200, mt : 5, mb: 5 }}>
-        <InputLabel id="team-select-label"> Select Team</InputLabel>
-        <Select
-          labelId="team-select-label"
-          id="team-select"
-          value={selectedTeam}
-          label="Select Team"
-          onChange={(e) => setSelectedTeam(e.target.value)}
-        >
-          {teamOptions.map(team => (
-            <MenuItem key={team} value={team}>{team}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {floorGraphData && <Bar data={floorGraphData} />}
+    <Container style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {floorGraphData && (
+        <div style={{ marginBottom: '40px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '80%' }}>
+            <Typography variant="h6" style={{ marginBottom: '10px', fontWeight: 'bold', textAlign: 'center' }}>
+              Allocated and Occupied Seats per Day
+            </Typography>
+            <Bar data={floorGraphData} options={floorGraphData.options} />
+          </div>
+        </div>
+      )}
     </Container>
   );
 };

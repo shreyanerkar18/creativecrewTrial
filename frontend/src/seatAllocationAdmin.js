@@ -101,7 +101,7 @@ const SeatAllocationAdmin = () => {
         businessId: values.bu
       }
       )
-      //console.log(response.data);
+      console.log(response.data);
       setOpen(false);
       setWorkDoing(null);
       setOpenSnackbar1(true);
@@ -161,7 +161,7 @@ const SeatAllocationAdmin = () => {
             //getRandomColor();
           });
           setBus(res.data);
-          //console.log(res.data);
+          console.log(res.data);
         }
       })
       .catch((err) => {
@@ -326,6 +326,7 @@ const SeatAllocationAdmin = () => {
       }
       objs.push(sobj);
     }
+    console.log("OOOOBBBBBBBJJJJJJJJJJ", objs);
     setSeats(objs);
     setOldSeats(objs);
   };
@@ -355,7 +356,7 @@ const SeatAllocationAdmin = () => {
         state: "",
         city: "",
         campus: "",
-        floor: "",
+        floor: 0,
         bu: 0,
         maxSeats: 0,
       });
@@ -367,7 +368,7 @@ const SeatAllocationAdmin = () => {
         [event.target.name]: event.target.value,
         city: "",
         campus: "",
-        floor: "",
+        floor: 0,
         bu: 0,
         maxSeats: 0,
       });
@@ -378,7 +379,7 @@ const SeatAllocationAdmin = () => {
         ...values,
         [event.target.name]: event.target.value,
         campus: "",
-        floor: "",
+        floor: 0,
         bu: 0,
         maxSeats: 0,
       });
@@ -388,7 +389,7 @@ const SeatAllocationAdmin = () => {
       setValues({
         ...values,
         [event.target.name]: event.target.value,
-        floor: "",
+        floor: 0,
         bu: 0,
         maxSeats: 0,
       });
@@ -742,7 +743,7 @@ const SeatAllocationAdmin = () => {
                       onChange={handleChange}
                     >
                       {countries.map((country, i) => (
-                        <MenuItem key={country.name} value={country.name}>{country.name}</MenuItem>
+                        <MenuItem value={country.name}>{country.name}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -760,7 +761,7 @@ const SeatAllocationAdmin = () => {
                     onChange={handleChange}
                   >
                     {states.map((state, i) => (
-                      <MenuItem key={state.name} value={state.name}>{state.name}</MenuItem>
+                      <MenuItem value={state.name}>{state.name}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -777,7 +778,7 @@ const SeatAllocationAdmin = () => {
                     onChange={handleChange}
                   >
                     {cities.map((city, i) => (
-                      <MenuItem key={city.name} value={city.name}>{city.name}</MenuItem>
+                      <MenuItem value={city.name}>{city.name}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -794,7 +795,7 @@ const SeatAllocationAdmin = () => {
                     onChange={handleChange}
                   >
                     {campuses.map((campus, i) => (
-                      <MenuItem key={campus.name} value={campus.name}>{campus.name}</MenuItem>
+                      <MenuItem value={campus.name}>{campus.name}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -811,7 +812,7 @@ const SeatAllocationAdmin = () => {
                     onChange={handleChange}
                   >
                     {floorList.map((floor, i) => (
-                      <MenuItem key={floor.name} value={floor.name}>{floor.name}</MenuItem>
+                      <MenuItem value={floor.name}>{floor.name}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -867,7 +868,7 @@ const SeatAllocationAdmin = () => {
                 </Button> */}
               {/*</Grid>
               </Box> */}
-              {workDoing === null && values.floor !== "" && <Box sx={{ minWidth: 120 }}>
+              {workDoing === null && <Box sx={{ minWidth: 120 }}>
                 <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
                   <Button
                     className="primaryBtnColors"
@@ -894,7 +895,7 @@ const SeatAllocationAdmin = () => {
                         onChange={handleChange}
                       >
                         {bus.map((bu, i) => (
-                          <MenuItem key={bu.id} value={bu.id}>{bu.name}</MenuItem>
+                          <MenuItem value={bu.id}>{bu.name}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>
@@ -938,7 +939,7 @@ const SeatAllocationAdmin = () => {
                 </>
               }
 
-              {workDoing === null && values.floor !== '' && <Box sx={{ minWidth: 120 }}>
+              {workDoing === null && <Box sx={{ minWidth: 120 }}>
                 <FormControl sx={{ m: 2, minWidth: "90%" }} size="medium">
                   <Button
                     className="primaryBtnColors"
@@ -1024,8 +1025,9 @@ const SeatAllocationAdmin = () => {
               <h2 className="fontFamily" style={{ textTransform: "capitalize" }}>Layout view {layoutView.country && layoutView.state && layoutView.city && layoutView.campus && layoutView.floor && <>( {layoutView.country} &gt; {layoutView.state} &gt; {layoutView.city} &gt; {layoutView.campus} &gt; {layoutView.floor} )</>}</h2>
               {seats && seats.length > 0
                 ? seats.map((row, rowIndex) => (
+                  <>
                     <div
-                      key={rowIndex+1}
+                      key={rowIndex}
                       className={`seat fontFamily ${seatEnable ? "" : "disabled-div"
                         }`}
                       style={{ background: colorCodeF(row.bu, row.selected) }}
@@ -1033,6 +1035,7 @@ const SeatAllocationAdmin = () => {
                     >
                       {values.floor} - {rowIndex + 1}
                     </div>
+                  </>
                 ))
                 : "No seats found "}
               {allocatedSeatsByGlobal &&
@@ -1040,7 +1043,7 @@ const SeatAllocationAdmin = () => {
                 bus &&
                 bus.length > 0 &&
                 bus.map((bu, i) => (
-                  <div className="legendsSeating fontFamily" key={bu.id}>
+                  <div className="legendsSeating fontFamily">
                     <div
                       className="seat"
                       style={{
