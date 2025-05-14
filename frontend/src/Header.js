@@ -3,12 +3,13 @@ import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
-import PersonIcon from "@mui/icons-material/Person";
-import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
+import IconButton from '@mui/material/IconButton';
+import PersonIcon from '@mui/icons-material/Person';
+import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "./AuthProvider";
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from 'jwt-decode';
+
 
 export default function Header() {
   const navigate = useNavigate();
@@ -16,35 +17,30 @@ export default function Header() {
   const { logout, token } = useContext(AuthContext);
 
   // Check if the current path is either /login or /signup
-  const hideHeaderOptions = ["/", "/signup", "/login"].includes(
-    location.pathname
-  );
+  const hideHeaderOptions = ["/", "/signup", "/login"].includes(location.pathname);
 
   let decoded;
   if (token) {
     try {
       decoded = jwtDecode(token);
-      //console.log(decoded);
+      //console.log(decoded); 
     } catch (error) {
-      console.error("Invalid token specified:", error); // Handle token error (e.g., log out the user)
+      console.error("Invalid token specified:", error); // Handle token error (e.g., log out the user) 
     }
   }
 
   const handleHome = () => {
-    if (
-      location.pathname !== "/seatAllocationAdmin" &&
-      decoded.role === "admin"
-    ) {
+    if (location.pathname !== "/seatAllocationAdmin" && decoded.role === 'admin') {
       console.log(decoded);
       return navigate("/seatAllocationAdmin");
     }
-    if (location.pathname !== "/hoe" && decoded.role === "hoe") {
+    if (location.pathname !== "/hoe" && decoded.role === 'hoe') {
       return navigate("/hoe");
     }
-    if (location.pathname !== "/manager" && decoded.role === "manager") {
+    if (location.pathname !== "/manager" && decoded.role === 'manager') {
       return navigate("/manager");
     }
-    if (location.pathname !== "/employee" && decoded.role === "employee") {
+    if (location.pathname !== "/employee" && decoded.role === 'employee') {
       return navigate("/employee");
     }
   };
@@ -66,83 +62,87 @@ export default function Header() {
     }
   };
 
-  const handlePlan = () => {
-    if (location.pathname !== "/plan") {
-      navigate("/plan");
+  const handleNoShowSeats = () => {
+    if (location.pathname !== "/noShowSeats") {
+      navigate("/noShowSeats");
     }
   };
 
-  const handleManageSeating = () => {
-    navigate("/hoeplan");
+  const handleSeatPool = () => {
+    if (location.pathname !== "/seatpool") {
+      navigate("/seatpool");
+    }
+  };
+
+  const handlePlan = () => {
+    if (decoded.role === 'admin') {
+      if (location.pathname !== "/plan") {
+        navigate("/plan");
+      }
+    } else {
+      if (location.pathname !== "/hoeplan") {
+        navigate("/hoeplan");
+      }
+    }
   };
 
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar color="success" position="static">
         <Toolbar>
-          {!hideHeaderOptions && token && (
+          {!hideHeaderOptions && token &&
             <IconButton color="inherit" onClick={handleHome}>
               <HomeRoundedIcon />
             </IconButton>
-          )}
+          }
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Creative Crew
           </Typography>
           {!hideHeaderOptions && (
             <>
-              {token && decoded.role === "admin" && (
-                <Typography
-                  variant="subtitle1"
-                  component="div"
-                  onClick={handlePlan}
-                  sx={{
-                    padding: "1%",
-                    cursor: "pointer",
-                    "&:hover": { color: "white" },
-                  }}
-                >
-                  Plan
-                </Typography>
-              )}
-
-              <Typography
+              {token && (decoded.role === "admin" || decoded.role === "hoe") && <Typography
                 variant="subtitle1"
                 component="div"
-                onClick={handleManageSeating}
-                sx={{
-                  padding: "1%",
-                  cursor: "pointer",
-                  "&:hover": { color: "white" },
-                }}
+                onClick={handlePlan}
+                sx={{ padding: "1%", cursor: "pointer", "&:hover": { color: "white" } }}
               >
-                Manage Seating Arrangement
-              </Typography>
-
+                Plan
+              </Typography>}
               <Typography
                 variant="subtitle1"
                 component="div"
                 onClick={handleGraphs}
-                sx={{
-                  padding: "1%",
-                  cursor: "pointer",
-                  "&:hover": { color: "white" },
-                }}
+                sx={{ padding: "1%", cursor: "pointer", "&:hover": { color: "white" } }}
               >
                 Graphs
               </Typography>
-
               <IconButton color="inherit" onClick={handleProfile}>
                 <PersonIcon />
               </IconButton>
-
+              {token && decoded.role === "employee" && (
+                  <Typography
+                    variant="subtitle1"
+                    component="div"
+                    onClick={handleNoShowSeats}
+                    sx={{ padding: "1%", cursor: "pointer", "&:hover": { color: "white" } }}
+                  >
+                    noShowSeats
+                  </Typography>
+                )}
+                {token && decoded.role === "employee" && (
+                  <Typography
+                    variant="subtitle1"
+                    component="div"
+                    onClick={handleSeatPool}
+                    sx={{ padding: "1%", cursor: "pointer", "&:hover": { color: "white" } }}
+                  >
+                    freePool
+                  </Typography>
+                )}
               <Typography
                 variant="subtitle1"
                 component="div"
-                sx={{
-                  padding: "1%",
-                  cursor: "pointer",
-                  "&:hover": { color: "white" },
-                }}
+                sx={{ padding: "1%", cursor: "pointer", "&:hover": { color: "white" } }}
                 onClick={handleLogout}
               >
                 Logout
@@ -154,3 +154,4 @@ export default function Header() {
     </Box>
   );
 }
+
